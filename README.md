@@ -87,7 +87,7 @@ Without a GitHub SSH key, the first line is followed by `SSH clone failed, retry
 
 ### claude.ai and Cowork
 
-Members install nothing. An organization Owner adds the plugin to the organization's library (**Organization settings → Plugins & skills**, from the GitHub repo `rudderlabs/crew-plugin`). Each member then connects Crew when Claude asks. The plugin also shows up in Claude Code for anyone signed in with that account. The body-check hook runs only in Claude Code.
+Members install nothing. An organization Owner adds the plugin to the organization's library (**Organization settings → Plugins & skills**, from the GitHub repo `rudderlabs/crew-plugin`). Each member then connects Crew when Claude asks. The plugin also shows up in Claude Code for anyone signed in with that account. The body-check hook runs in Claude Code and Cowork. claude.ai chat runs no hooks, so there the skills run the check themselves.
 
 ### Other agents and MCP clients
 
@@ -95,7 +95,7 @@ The Crew MCP server is `https://crew.rudderstack.com/mcp` (Streamable HTTP, OAut
 
 ## Your first Agent
 
-After signing in, ask for the work in plain words, such as "build an Agent that welcomes new signups". The `workspace-setup` skill takes it in steps, and asks for your yes before it creates, sends or switches on anything:
+After signing in, ask for the work in plain words, such as "build an Agent that welcomes new signups". The `workspace-setup` skill takes it in steps, and asks for your yes before it publishes a change, moves an Agent to Shadow, creates a webhook or sends events:
 
 1. **Claude reads your workspace** and tells you what already exists, so nothing is created twice.
 2. **It creates the Agent Off.** An Off Agent decides nothing and sends nothing.
@@ -103,7 +103,7 @@ After signing in, ask for the work in plain words, such as "build an Agent that 
 4. **It gets your events in:** your RudderStack events through a Webhook destination (the `connect-rudderstack` skill), or test events sent from Claude Code.
 5. **Optionally, Calibrate.** Once real trigger events have arrived, Claude replays about ten of them and you mark each decision right or wrong.
 6. **It moves the Agent to Shadow,** after telling you how often the trigger fires. In Shadow the Agent decides on each new trigger event and sends nothing. Read the decisions on the Decisions page in the Crew app.
-7. **You take it Live in the Crew app:** paste the workspace context Claude hands you, connect the channels the Agent sends on, then switch it Live. Claude never turns an Agent Live.
+7. **You take it Live in the Crew app:** connect the channels the Agent sends on, then switch it Live. Claude never turns an Agent Live. Claude also hands you the workspace context to paste on the Context page; only a workspace admin can save it, and nothing waits on it.
 
 ## Update, try, remove
 
