@@ -2,48 +2,16 @@
 
 One install connects Claude to a Crew workspace and adds the skills that set it up and author its Agents.
 
-## Before you start
-
-- **A Crew workspace you can sign in to.** The RudderStack team sets it up and invites you. Your role in it decides what Claude can do through the Crew MCP. If the Crew server fails to connect right after you sign in, your account has no role in a Crew workspace yet: ask your RudderStack contact.
-- **Workspace features the RudderStack team enables on request:** **Profile enrichment**, for research about a person or company (lead-scoring's Fit, linkedin-campaign's research), and the **HeyReach channel**, for the LinkedIn skills. When a feature is on, the skills that use it just work. When it is off, each skill says what to ask for and carries on without it.
-- **Your RudderStack data,** read through the RudderStack MCP (below).
-- **Python 3,** for the scripts and the body-check hook.
-- **No channels to start.** An Agent runs in Shadow, deciding on real events and sending nothing, before any channel is connected. Connect channels in Crew before it goes Live.
-
 ## Install
 
-**The quick way:** in Claude Code, say
-
-```
-Follow https://raw.githubusercontent.com/rudderlabs/crew-plugin/main/llms.txt to set up Crew.
-```
-
-[`llms.txt`](https://raw.githubusercontent.com/rudderlabs/crew-plugin/main/llms.txt) has Claude install this plugin (and `rudder-core`, below, when your events are in RudderStack), then walks you through `/reload-plugins` and signing in, and hands off to the skills. The rest of this section is the same thing by hand.
-
-Claude Code installs plugins from a marketplace: a repo or folder with a `.claude-plugin/marketplace.json` at its root. This repo has one, named `rudder-crew`, with the plugin in `plugins/crew/`. In Claude Code:
+In Claude Code:
 
 ```
 /plugin marketplace add rudderlabs/crew-plugin
 /plugin install crew@rudder-crew
 ```
 
-From a terminal, the same two steps:
-
-```bash
-claude plugin marketplace add rudderlabs/crew-plugin
-```
-
-```bash
-claude plugin install crew@rudder-crew
-```
-
-The marketplace source can be a GitHub `owner/repo`, any git URL, or a local folder that holds `.claude-plugin/marketplace.json`, such as a clone of the repo. The marketplace is named `rudder-crew` whichever source you add, so the install line stays `crew@rudder-crew`. Get updates with `/plugin marketplace update rudder-crew`. To try the plugin for one session without installing it, start Claude Code with `claude --plugin-dir <path to the repo>/plugins/crew`.
-
-On claude.ai and in Cowork, an organization Owner syncs the repo into the org library (Organization settings → Plugins & skills); the plugin then also appears in Claude Code for anyone signed in with that account.
-
-On first use, Claude asks you to sign in to Crew (in Claude Code, run `/mcp`). A sign-in maps to one workspace. To use another Crew host, such as a staging or self-hosted deployment, add your own Crew MCP entry; the skills use whichever Crew MCP is connected.
-
-To let Claude read your own RudderStack data (sources, event volumes, live events), also install `rudder-core` from RudderStack's public marketplace: `/plugin marketplace add rudderlabs/rudder-agent-skills`, then `/plugin install rudder-core@rudder-agent-skills`. It connects the RudderStack MCP at `https://mcp.rudderstack.com/mcp` and signs you in on first use; `workspace-setup` reads your sources through it.
+What you need first, the one-line setup, signing in, claude.ai and Cowork, updating and troubleshooting: [the install guide](https://github.com/rudderlabs/crew-plugin#install).
 
 ## What's inside
 
