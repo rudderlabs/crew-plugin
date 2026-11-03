@@ -69,7 +69,7 @@ Installing plugin "crew@rudder-crew"...
 
 $ claude plugin list
   ❯ crew@rudder-crew
-    Version: 0.6.3
+    Version: 0.6.4
     Scope: user
     Status: ✔ enabled
 ```
@@ -100,10 +100,11 @@ After signing in, ask for the work in plain words, such as "build an Agent that 
 1. **Claude reads your workspace** and tells you what already exists, so nothing is created twice.
 2. **It creates the Agent Off.** An Off Agent decides nothing and sends nothing.
 3. **It dry-runs the Agent on five to ten made-up people** and shows you every draft. Nothing is sent, and no events are needed yet. Say what to change: Claude edits a working copy and runs it again, and publishes once you say the drafts are right.
-4. **It gets your events in:** your RudderStack events through a Webhook destination (the `connect-rudderstack` skill), or test events sent from Claude Code.
-5. **Optionally, Calibrate.** Once real trigger events have arrived, Claude replays about ten of them and you mark each decision right or wrong.
+4. **It connects your RudderStack events,** if you use RudderStack: a Webhook destination sends them to Crew (the `connect-rudderstack` skill). They keep arriving after the Agent moves to Shadow.
+5. **Optionally, Calibrate.** Once real trigger events have arrived, Claude replays about ten of them and you mark each decision right or wrong. With test events only, this comes after step 7.
 6. **It moves the Agent to Shadow,** after telling you how often the trigger fires. In Shadow the Agent decides on each new trigger event and sends nothing. Read the decisions on the Decisions page in the Crew app.
-7. **You take it Live in the Crew app:** connect the channels the Agent sends on, then switch it Live. Claude never turns an Agent Live. Claude also hands you the workspace context to paste on the Context page; only a workspace admin can save it, and nothing waits on it.
+7. **Without RudderStack, it sends test events from Claude Code,** now that the Agent is in Shadow. Crew decides only on events that arrive while an Agent is on and never replays earlier ones, so test events sent any sooner would leave the Decisions page empty.
+8. **You take it Live in the Crew app:** connect the channels the Agent sends on, then switch it Live. Claude never turns an Agent Live. Claude also hands you the workspace context to paste on the Context page; only a workspace admin can save it, and nothing waits on it.
 
 ## Update, try, remove
 

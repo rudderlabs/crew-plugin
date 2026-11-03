@@ -17,11 +17,11 @@ Tell the user what is done and what is next in their words: Agent, dry run, Shad
 
 ## Who does what
 
-| Who                                                | Does                                                                                                                                                                                                                                  |
-| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **The Crew team**                                  | Creates the workspace and invites people (an invite joins as `member`); links Crew's own RudderStack instance; turns on learning and other per-workspace features                                                                     |
-| **The user or a workspace admin, in the Crew app** | Makes someone an `admin` (Settings → Members); pastes the context (`/context`, admin only); imports a catalog file; marks a property as an identifier (Events); connects channels; revokes a webhook; turns an Agent Live             |
-| **The user, in RudderStack**                       | Adds the Webhook destination, or approves a Terraform or rudder-cli change that adds it                                                                                                                                               |
+| Who                                                | Does                                                                                                                                                                                                                                   |
+| -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **The Crew team**                                  | Creates the workspace and invites people (an invite joins as `member`); links Crew's own RudderStack instance; turns on learning and other per-workspace features                                                                      |
+| **The user or a workspace admin, in the Crew app** | Makes someone an `admin` (Settings → Members); pastes the context (`/context`, admin only); imports a catalog file; marks a property as an identifier (Events); connects channels; revokes a webhook; turns an Agent Live              |
+| **The user, in RudderStack**                       | Adds the Webhook destination, or approves a Terraform or rudder-cli change that adds it                                                                                                                                                |
 | **Claude, over the Crew MCP**                      | Reads the workspace; drafts the context and catalog as paste-ready text; creates webhooks and sends test events; creates Agents (Off); dry runs; edits; publishes onto Off or Shadow Agents; Off ↔ Shadow; reads decisions; Calibrate |
 
 Over the sign-in, Claude has exactly the permissions of the user's role; a personal access token carries a scope instead (`references/mcp-map.md` → "Signing in and permissions").
@@ -64,19 +64,23 @@ The first thing the user sees; aim to reach it early in the session. One `previe
 
 Read `fired` first, then every draft as its recipient would. Fix the body in a working copy (`draft_createForSkill`, `draft_save`), dry-run the same list again with its `draftId`, and `draft_publish` once the user says the drafts are right.
 
-### 5. Get events in, while the user reads drafts
+### 5. Connect the real event stream, while the user reads drafts
 
-A customer with RudderStack sends their real event stream: the `connect-rudderstack` skill. Otherwise, test events from Claude Code (`references/events-catalog.md` → "Test events from Claude Code"). Skip this step when events already arrive.
+A customer with RudderStack sends their real event stream now: the `connect-rudderstack` skill. The stream keeps flowing after the move to Shadow, and Calibrate can replay it while the Agent is still Off. Skip this step when events already arrive. A customer without RudderStack gets test events from Claude Code instead, in step 8, once the Agent is in Shadow.
 
 ### 6. Calibrate, once real trigger events have arrived
 
-Optional, and worth it. The `calibrate` skill replays about ten recent real trigger events through the Agent's working copy, shows the decisions one card at a time, and turns the user's verdicts into changes. It works while the Agent is Off, and publishes to Shadow at most.
+Optional, and worth it. The `calibrate` skill replays about ten recent real trigger events through the Agent's working copy, shows the decisions one card at a time, and turns the user's verdicts into changes. Any event that reached Crew through a webhook counts, test events included; dry runs don't. It works whether the Agent is Off or in Shadow, and publishes to Shadow at most. With the stream from step 5, run it here, before Shadow. With test events only there is nothing to replay yet, so run it after step 8.
 
 ### 7. Move it to Shadow
 
-First tell the user how often the trigger fires (`catalog_list` counts, or a day of the source's event metrics in RudderStack) and that every match is one model decision on the Decisions page; narrow a busy trigger with a condition (`when`, `references/agent-schema.md`) first. With their yes, `agent_update` with `status: "shadow"`. Turning it on checks the whole body strictly, so fix whatever the refusal names. Then read decisions with `analytics_list` and, for an Agent with tools, check one with `analytics_getExecution`.
+First tell the user how often the trigger fires (`catalog_list` counts, or a day of the source's event metrics in RudderStack; with no stream, only on the test events of step 8) and that every match is one model decision on the Decisions page; narrow a busy trigger with a condition (`when`, `references/agent-schema.md`) first. With their yes, `agent_update` with `status: "shadow"`. Turning it on checks the whole body strictly, so fix whatever the refusal names. From then on the Agent decides on each trigger event as it arrives. Read decisions as they come in with `analytics_list` and, for an Agent with tools, check one with `analytics_getExecution`.
 
-### 8. Hand over
+### 8. Send test events, once it is in Shadow
+
+For a customer without a real stream: test events from Claude Code (`references/events-catalog.md` → "Test events from Claude Code"). Get the user's yes before creating the test webhook, and again before sending. Not before step 7: Crew decides on an event only for the Agents that are on when it arrives, and never replays it later, so test events sent to an Off Agent leave the Decisions page empty. If any went out while it was Off, send the same people again with a new `--run`. Then read the decisions as in step 7.
+
+### 9. Hand over
 
 Show the user where the decisions are (the Decisions page), and list what is left for them in the app: pasting the context, connecting the channels the Agent will send on, and, later, turning it Live.
 
