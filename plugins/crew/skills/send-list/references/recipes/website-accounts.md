@@ -25,7 +25,7 @@ The events are in the user's own warehouse, where a RudderStack warehouse destin
 
 Do not assume column or event names. Read a few rows of each table first. The fields this recipe needs, under the names RudderStack's warehouse destinations usually give them:
 
-- `context_page_url`: the page. Its host tells the website from the app.
+- `context_page_url`: the page, read only from the website's page views, where its host keeps the website's own pages. The app is told apart by its source, not by a URL.
 - `context_traits_email`: the visitor's email, when the visitor is identified. If it is empty, the `users` table in the same schema has `email` by `id` (the `user_id`).
 - `event` (in `tracks`): the event name, for the app's trial or plan events.
 
