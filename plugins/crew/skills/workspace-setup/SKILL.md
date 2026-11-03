@@ -66,7 +66,7 @@ Read `fired` first, then every draft as its recipient would. Fix the body in a w
 
 ### 5. Connect the real event stream, while the user reads drafts
 
-A customer with RudderStack sends their real event stream now: the `connect-rudderstack` skill. The stream keeps flowing after the move to Shadow, and Calibrate can replay it while the Agent is still Off. Skip this step when events already arrive. A customer without RudderStack gets test events from Claude Code instead, in step 8, once the Agent is in Shadow.
+A customer with RudderStack sends their real event stream now: the `connect-rudderstack` skill. The stream keeps flowing after the move to Shadow, and Calibrate can replay it while the Agent is still Off. Skip this step when events already arrive. That skill's one test identify and track only prove the webhook token works, on an event name no Agent triggers on, so they can go while the Agent is Off. A customer without RudderStack gets test events meant to produce decisions from Claude Code instead, in step 8, once the Agent is in Shadow.
 
 ### 6. Calibrate, once real trigger events have arrived
 
