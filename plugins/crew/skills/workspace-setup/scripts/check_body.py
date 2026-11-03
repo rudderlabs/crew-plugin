@@ -241,11 +241,19 @@ def check(body):
 
 
 def main():
-    if len(sys.argv) != 2:
+    if len(sys.argv) != 2 or sys.argv[1] in ("-h", "--help"):
         print(__doc__.strip().split("\n\n")[-2])
+        sys.exit(0 if sys.argv[1:] in (["-h"], ["--help"]) else 2)
+    source = "stdin" if sys.argv[1] == "-" else sys.argv[1]
+    try:
+        raw = sys.stdin.read() if sys.argv[1] == "-" else open(sys.argv[1], encoding="utf-8").read()
+        body = unwrap(json.loads(raw))
+    except (OSError, ValueError) as exc:
+        print(f"check_body.py: cannot read a body from {source}: {exc}", file=sys.stderr)
         sys.exit(2)
-    raw = sys.stdin.read() if sys.argv[1] == "-" else open(sys.argv[1], encoding="utf-8").read()
-    body = unwrap(json.loads(raw))
+    if not isinstance(body, dict):
+        print(f"check_body.py: {source} holds no Agent body (expected a JSON object)", file=sys.stderr)
+        sys.exit(2)
     errors, warnings = check(body)
     name = body.get("displayName") or body.get("skillId") or "agent"
     n = len((body.get("decisionLogic") or {}).get("actionPolicies") or [])
