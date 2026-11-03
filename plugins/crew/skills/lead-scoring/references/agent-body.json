@@ -1,0 +1,175 @@
+{
+  "skillId": "<company-slug>-lead-scoring",
+  "displayName": "<Company> \u00b7 Lead scoring",
+  "version": 1,
+  "launchMode": "shadow",
+  "priority": 100,
+  "goal": "Give every new lead one tier, Hot, Warm or Cold, with the reasons behind it, and route it: Hot to sales now, Warm to nurture, Cold recorded. A lead is worth sales' time when <ONE_LINE_ICP>.",
+  "agentPrompt": "You score leads for <Company>, which sells <WHAT_IT_SELLS> to <WHO_BUYS_IT>.\n\nWho fits: <ICP: industries, company size, regions, use cases>. Who buys or champions it: <BUYER_ROLES>. Who never fits: <EXCLUSIONS, e.g. students, personal projects, agencies reselling, competitors>.\n\nRead the person in front of you, not a type. Never invent a company fact: when nothing says what the company is, Fit is Unknown. Never message the lead from this Agent's sales card; it is for a seller.",
+  "triggers": [
+    {
+      "id": "signup",
+      "eventName": "<SIGNUP_EVENT from catalog_list>"
+    },
+    {
+      "id": "intent",
+      "eventName": "<A BUYING-INTENT EVENT from catalog_list, e.g. a pricing page view or a demo form>"
+    }
+  ],
+  "successEvent": [
+    {
+      "id": "meeting",
+      "eventName": "<SUCCESS_EVENT from catalog_list, e.g. a booked meeting>"
+    }
+  ],
+  "attributionWindowDays": 30,
+  "inputSchema": {
+    "entityTraits": []
+  },
+  "skills": [
+    {
+      "skillId": "fit",
+      "name": "Fit",
+      "promptFragment": "Does this person's company match who fits <Company>: <ICP>? Never fits: <EXCLUSIONS>. Use, in this order: the company research on their profile, the company they gave us, and their email's domain. What they told us at signup is evidence too: <SIGNUP_ANSWERS_THAT_SHOW_FIT, e.g. naming a tool they are replacing means the company already has the need>, which makes them at least Partial fit. A free-mail address with no company, or a company nothing describes, is Unknown, not Not a fit. Answer in one to three plain sentences, opening with Strong fit, Partial fit, Not a fit or Unknown, then say what you know about the company and where it comes from. Put the whole reading in ONE evidence entry, as a single paragraph."
+    },
+    {
+      "skillId": "role",
+      "name": "Role",
+      "promptFragment": "Can this person buy <WHAT_IT_SELLS> or champion it inside their company? Buyers and champions: <BUYER_ROLES>. Use their title, seniority and the role they told us at signup. Answer in one or two plain sentences, opening with Decision maker, Champion, User or Unknown. Put the whole reading in ONE evidence entry, as a single paragraph."
+    },
+    {
+      "skillId": "intent",
+      "name": "Intent",
+      "promptFragment": "Are they acting like a buyer right now? Look across their recent events, not only this one. Buying: <BUYING_EVENTS, e.g. viewing pricing, starting to book a meeting, naming the tool they are replacing or a project with a date>. Evaluating: they signed up, started a trial or took a setup step, and nothing yet says Buying. Browsing: only site or docs visits, with no signup, trial or setup step. How fast they move counts too. Answer in one or two plain sentences, opening with Buying, Evaluating or Browsing, and name what they did. Put the whole reading in ONE evidence entry, as a single paragraph."
+    }
+  ],
+  "brandVoice": "Plain, short and specific. Write for a busy seller: facts first, no hype, no exclamation marks, no stock phrases.",
+  "enrichmentIds": ["<FIT_ENRICHMENT_ID from enrichment_create, or remove this field>"],
+  "guardrails": {
+    "deduplicationEnabled": false,
+    "deduplicationWindow": "72h",
+    "maxActionsPerEntityPerDay": 3,
+    "maxActionsPerEntityPerWeek": 10
+  },
+  "scheduling": {
+    "triggerDelay": "2m"
+  },
+  "followUp": {
+    "enabled": false,
+    "count": 1,
+    "gapDays": 7
+  },
+  "decisionLogic": {
+    "strategy": "policy_constrained_llm_selection",
+    "decideMode": "options",
+    "priorityGuidance": "Exactly one tier fits each lead. Check Cold first, then Hot; Warm is every lead that is neither.",
+    "hardConstraints": [
+      {
+        "id": "customer",
+        "condition": "The person's company is already a customer or has an open opportunity: <THE TRAIT OR EVENT THAT SAYS SO>.",
+        "effect": "Take no action."
+      },
+      {
+        "id": "internal",
+        "condition": "The person is one of our own staff or a test account: <e.g. the isInternal trait is true>.",
+        "effect": "Take no action."
+      }
+    ],
+    "whenNoClearFit": "closest_action",
+    "acts": [
+      {
+        "id": "record",
+        "name": "Record as Cold"
+      },
+      {
+        "id": "sales",
+        "name": "Hand to sales"
+      },
+      {
+        "id": "nurture",
+        "name": "Nurture"
+      }
+    ],
+    "options": [
+      {
+        "id": "cold",
+        "name": "Cold: record",
+        "actId": "record",
+        "whenToPrefer": "Fit says Not a fit, whatever the other readings say; or Intent says Browsing (no signup, trial or setup step yet) and nothing gives a reason to act now. Recording it costs nothing and keeps the lead measurable."
+      },
+      {
+        "id": "hot",
+        "name": "Hot: hand to sales",
+        "actId": "sales",
+        "whenToPrefer": "Fit is at least Partial fit and Intent says Buying; or Fit is Strong fit and Role says Decision maker while Intent says Evaluating."
+      },
+      {
+        "id": "warm",
+        "name": "Warm: nurture",
+        "actId": "nurture",
+        "whenToPrefer": "Every lead that is neither Cold nor Hot, including one whose Fit is Unknown."
+      }
+    ],
+    "actionPolicies": [
+      {
+        "id": "record_cold",
+        "actId": "record",
+        "action": "Record as Cold",
+        "channelType": "webhook",
+        "channelId": "<WEBHOOK_CHANNEL_ID from channels_list; Shadow runs on channelType alone>"
+      },
+      {
+        "id": "hand_to_sales",
+        "actId": "sales",
+        "action": "Hand to sales",
+        "channelType": "slack",
+        "channelId": "<SALES_SLACK_CHANNEL_ID from channels_list>"
+      },
+      {
+        "id": "nurture_email",
+        "actId": "nurture",
+        "action": "Nurture email",
+        "channelType": "customerio",
+        "channelId": "<CUSTOMERIO_CHANNEL_ID from channels_list>"
+      }
+    ]
+  },
+  "availableActions": [
+    {
+      "id": "record_cold",
+      "type": "Record as Cold",
+      "channel": "webhook",
+      "enabled": true
+    },
+    {
+      "id": "hand_to_sales",
+      "type": "Hand to sales",
+      "channel": "slack",
+      "enabled": true,
+      "payloadTemplate": {
+        "prompt": "A note to <Company>'s sales team about one lead they should contact now. The card above it already shows the tier and each reading, so do not repeat them. message is one short paragraph of plain sentences, no line breaks: first why this person is worth a call this week, citing the one or two facts that matter most and where they come from, then an opener a seller could send them, in quotes, two sentences at most, specific to what this person did or said, with no flattery, no claim to know them, and no mention of tracking, scores or our analysis. Never invent a fact about the person or their company.",
+        "requiredInputs": [],
+        "optionalInputs": [],
+        "outputFields": ["message"]
+      }
+    },
+    {
+      "id": "nurture_email",
+      "type": "Nurture email",
+      "channel": "email",
+      "enabled": true,
+      "sender": {
+        "name": "<SENDER_NAME>",
+        "title": "<SENDER_TITLE>",
+        "email": "<SENDER_EMAIL>"
+      },
+      "payloadTemplate": {
+        "prompt": "<Write with workspace-setup's act-writing.md: who it is from and to, the one thing the email should do (for example: point them at the one resource that fits what they are trying to do, and ask what their company is when Fit is Unknown), the shape to aim for and avoid, each of the template's {{trigger.*}} keys and its format (subject and body are only the fallback when there is no template), and the hard limits.>",
+        "requiredInputs": [],
+        "optionalInputs": [],
+        "outputFields": ["subject", "body"]
+      },
+      "designStudioEmailId": "<DESIGN_STUDIO_EMAIL_ID: the UUID of the nurture template in Customer.io Design Studio; a transactional message with exactly the same name must exist. Never send transactionalMessageId: create refuses it>"
+    }
+  ]
+}

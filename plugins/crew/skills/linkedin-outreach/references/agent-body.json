@@ -1,0 +1,195 @@
+{
+  "skillId": "<launch-slug>-linkedin",
+  "displayName": "<LAUNCH> · LinkedIn outreach",
+  "version": 1,
+  "launchMode": "shadow",
+  "priority": 100,
+  "goal": "Start a real conversation on LinkedIn with each <LAUNCH> lead who fits, and move it toward <OUTCOME>. <OFFER> Choose the next move from everything that has happened with this person, whatever the event; doing nothing is often the right move.",
+  "triggers": [
+    {
+      "id": "lead",
+      "eventName": "<EVENT>"
+    },
+    {
+      "id": "accepted",
+      "eventName": "LinkedIn Connection Accepted"
+    },
+    {
+      "id": "not_sent",
+      "eventName": "LinkedIn Outreach Not Sent"
+    },
+    {
+      "id": "reply",
+      "eventName": "LinkedIn Reply Received"
+    }
+  ],
+  "successEvent": [
+    {
+      "id": "outcome",
+      "eventName": "<SUCCESS_EVENT>"
+    }
+  ],
+  "skills": [
+    {
+      "skillId": "fit",
+      "name": "Fit",
+      "promptFragment": "If we have not contacted this person yet: do they match: <FIT_RULE>? Anyone we already contacted already qualified."
+    },
+    {
+      "skillId": "state",
+      "name": "Where things stand",
+      "promptFragment": "Where do things stand with this person: are we connected on LinkedIn (is_connection, an accepted request, or a request HeyReach could not send because we already are), what have we already sent them, and what did they last say or do? A previous decision marked [shadow — not sent] sent nothing: only a Live send counts as having contacted them. A lead that arrives twice is still the same person. A reply, an accepted request or a not-sent report from HeyReach shows we are already in touch with them, whatever the decision history says."
+    },
+    {
+      "skillId": "intent",
+      "name": "Intent",
+      "promptFragment": "What does the latest thing they said or did tell us about their interest? Did they ask us to stop, or say they are not interested?"
+    }
+  ],
+  "guardrails": {
+    "deduplicationEnabled": false,
+    "deduplicationWindow": "72h",
+    "maxActionsPerEntityPerDay": 3,
+    "maxActionsPerEntityPerWeek": 6
+  },
+  "scheduling": {
+    "triggerDelay": "0s"
+  },
+  "followUp": {
+    "enabled": false,
+    "count": 3,
+    "gapDays": 3
+  },
+  "attributionWindowDays": 7,
+  "inputSchema": {
+    "entityTraits": []
+  },
+  "agentToolNames": [],
+  "enrichmentIds": [],
+  "decisionLogic": {
+    "strategy": "policy_constrained_llm_selection",
+    "hardConstraints": [
+      {
+        "id": "stop",
+        "condition": "The person asked us to stop messaging them, or said plainly they do not want this. A \"not now\", \"maybe later\" or \"not a priority yet\" is not this.",
+        "effect": "Take no action, for this event and every later one."
+      }
+    ],
+    "whenNoClearFit": "hold_off",
+    "acts": [
+      {
+        "id": "connect",
+        "name": "Connect on LinkedIn"
+      },
+      {
+        "id": "message",
+        "name": "Message on LinkedIn"
+      },
+      {
+        "id": "reply",
+        "name": "Reply on LinkedIn"
+      }
+    ],
+    "options": [
+      {
+        "id": "connect",
+        "name": "Connect on LinkedIn",
+        "actId": "connect",
+        "whenToPrefer": "A connection request, whose note is the whole message. It reaches only someone we are not connected to, and each person only once: anyone we already sent a request or a message is past this move."
+      },
+      {
+        "id": "message",
+        "name": "Message on LinkedIn",
+        "actId": "message",
+        "whenToPrefer": "A first message through HeyReach. It reaches only someone we are already connected to, and each person only once. It starts the conversation."
+      },
+      {
+        "id": "reply",
+        "name": "Reply on LinkedIn",
+        "actId": "reply",
+        "whenToPrefer": "A message in the conversation we already have with them, to answer what they said or to follow up on something they did."
+      }
+    ],
+    "actionPolicies": [
+      {
+        "id": "connect_on_linkedin",
+        "actId": "connect",
+        "action": "Connect on LinkedIn",
+        "channelId": "<HEYREACH_CHANNEL_ID>"
+      },
+      {
+        "id": "message_on_linkedin",
+        "actId": "message",
+        "action": "Message on LinkedIn",
+        "channelId": "<HEYREACH_CHANNEL_ID>"
+      },
+      {
+        "id": "reply_on_linkedin",
+        "actId": "reply",
+        "action": "Reply on LinkedIn",
+        "channelId": "<HEYREACH_CHANNEL_ID>"
+      }
+    ]
+  },
+  "availableActions": [
+    {
+      "id": "connect_on_linkedin",
+      "type": "Connect on LinkedIn",
+      "channel": "heyreach",
+      "enabled": true,
+      "payloadTemplate": {
+        "prompt": "Write a LinkedIn connection note under 200 characters for this person, from what we know about them. Use the talking point, when there is one, in your own words; never copy any field word for word. Never claim to know, have seen or admire their work, and no stock flattery such as \"stood out\" or \"impressed by\": we have not met. Never describe yourself or invent anything about the sender (no \"I work with…\", \"fellow …\"); if you say who you are, say only where you work. Friendly, plain text, no links, no pitch. Never mention a score, tracking, our analysis or how we found them, and never refer to anything they did on our website or in the product (a page, a plan, a trial), even in passing.",
+        "requiredInputs": [],
+        "optionalInputs": [],
+        "outputFields": []
+      },
+      "heyreachCampaign": {
+        "id": "<CONNECT_CAMPAIGN_ID>",
+        "name": "<LAUNCH> · Connect",
+        "variables": [
+          {
+            "key": "crew_connection_note",
+            "places": ["step 1, connection note"],
+            "maxChars": 200
+          }
+        ]
+      }
+    },
+    {
+      "id": "message_on_linkedin",
+      "type": "Message on LinkedIn",
+      "channel": "heyreach",
+      "enabled": true,
+      "payloadTemplate": {
+        "prompt": "Open a conversation in two or three short sentences. Say in your own words what <LAUNCH> does and why it could matter to them, from what we know about them; use the talking point the same way, never word for word. Never claim to know, have seen or admire their work, and no stock flattery such as \"stood out\" or \"impressed by\": we have not met. Never describe yourself or invent anything about the sender (no \"I work with…\", \"fellow …\"); if you say who you are, say only where you work. Thank them for connecting only when HeyReach reported that they accepted our request; an existing connection (is_connection) is not that, so just say hello. Ask one easy question. Plain text, no links. Never mention a score, tracking, our analysis or how we found them, and never refer to anything they did on our website or in the product (a page, a plan, a trial), even in passing. What <LAUNCH> is, for you only (never quote it): <OFFER>",
+        "requiredInputs": [],
+        "optionalInputs": [],
+        "outputFields": []
+      },
+      "heyreachCampaign": {
+        "id": "<MESSAGE_CAMPAIGN_ID>",
+        "name": "<LAUNCH> · Message",
+        "variables": [
+          {
+            "key": "crew_message",
+            "places": ["message"],
+            "maxChars": 2048
+          }
+        ]
+      }
+    },
+    {
+      "id": "reply_on_linkedin",
+      "type": "Reply on LinkedIn",
+      "channel": "heyreach",
+      "enabled": true,
+      "payloadTemplate": {
+        "prompt": "Continue the conversation in one to three short sentences, plain text, no links. When this event is their reply, answer it. On any other event, do not respond to an earlier message: offer help without saying what we saw. What you may say about <LAUNCH>, in your own words (prices and limits exactly as given): <OFFER> <OFFER_FACTS> Never state or imply any other product fact, price or integration: if they ask whether <LAUNCH> does or supports something not listed here, say you will check and offer a quick call; never answer yes or no. Bring up price only when they ask about <LAUNCH>'s price. When they ask for a demo or a call, or name a day or time, reply warmly that you will send a few times that work; never propose, accept or agree to a specific day, date or time yourself, and never commit the team to anything. Never describe yourself or invent anything about the sender. Never mention a score, tracking, our analysis or how we found them, and never refer to anything they did on our website or in the product (a page, a plan, a trial), even in passing.",
+        "requiredInputs": [],
+        "optionalInputs": [],
+        "outputFields": []
+      },
+      "heyreachDirectMessage": true
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "crew": {
+      "type": "http",
+      "url": "https://crew.rudderstack.com/mcp"
+    }
+  }
+}

@@ -1,0 +1,87 @@
+# crew: the RudderCrew plugin for Claude
+
+One install connects Claude to a Crew workspace and adds the skills that set it up and author its Agents.
+
+## Before you start
+
+- **A Crew workspace you can sign in to.** The RudderStack team sets it up and invites you. Your role in it decides what Claude can do through the Crew MCP. If the Crew server fails to connect right after you sign in, your account has no role in a Crew workspace yet: ask your RudderStack contact.
+- **Workspace features the RudderStack team enables on request:** **Profile enrichment**, for research about a person or company (lead-scoring's Fit, linkedin-campaign's research), and the **HeyReach channel**, for the LinkedIn skills. When a feature is on, the skills that use it just work. When it is off, each skill says what to ask for and carries on without it.
+- **Your RudderStack data,** read through the RudderStack MCP (below).
+- **Python 3,** for the scripts and the body-check hook.
+- **No channels to start.** An Agent runs in Shadow, deciding on real events and sending nothing, before any channel is connected. Connect channels in Crew before it goes Live.
+
+## Install
+
+**The quick way:** in Claude Code, say
+
+```
+Follow https://raw.githubusercontent.com/rudderlabs/crew-plugin/main/llms.txt to set up Crew.
+```
+
+[`llms.txt`](https://raw.githubusercontent.com/rudderlabs/crew-plugin/main/llms.txt) has Claude install this plugin (and `rudder-core`, below, when your events are in RudderStack), then walks you through `/reload-plugins` and signing in, and hands off to the skills. The rest of this section is the same thing by hand.
+
+Claude Code installs plugins from a marketplace: a repo or folder with a `.claude-plugin/marketplace.json` at its root. This repo has one, named `rudder-crew`, with the plugin in `plugins/crew/`. In Claude Code:
+
+```
+/plugin marketplace add rudderlabs/crew-plugin
+/plugin install crew@rudder-crew
+```
+
+From a terminal, the same two steps:
+
+```bash
+claude plugin marketplace add rudderlabs/crew-plugin
+```
+
+```bash
+claude plugin install crew@rudder-crew
+```
+
+The marketplace source can be a GitHub `owner/repo`, any git URL, or a local folder that holds `.claude-plugin/marketplace.json`, such as a clone of the repo. The marketplace is named `rudder-crew` whichever source you add, so the install line stays `crew@rudder-crew`. Get updates with `/plugin marketplace update rudder-crew`. To try the plugin for one session without installing it, start Claude Code with `claude --plugin-dir <path to the repo>/plugins/crew`.
+
+On claude.ai and in Cowork, an organization Owner syncs the repo into the org library (Organization settings → Plugins & skills); the plugin then also appears in Claude Code for anyone signed in with that account.
+
+On first use, Claude asks you to sign in to Crew (in Claude Code, run `/mcp`). A sign-in maps to one workspace. To use another Crew host, such as a staging or self-hosted deployment, add your own Crew MCP entry; the skills use whichever Crew MCP is connected.
+
+To let Claude read your own RudderStack data (sources, event volumes, live events), also install `rudder-core` from RudderStack's public marketplace: `/plugin marketplace add rudderlabs/rudder-agent-skills`, then `/plugin install rudder-core@rudder-agent-skills`. It connects the RudderStack MCP at `https://mcp.rudderstack.com/mcp` and signs you in on first use; `workspace-setup` reads your sources through it.
+
+## What's inside
+
+| Part                                          | What it does                                                                                                                                                                                                                                                                                                                                                                                                                                                    | Needs                                                                                                                                                                              |
+| --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `workspace-setup` (foundation)                | Sets up a workspace and authors any Agent end to end: recon, context, event catalog, Observe/Decide/Act design, the body schema, message writing. Ships `check_body.py`.                                                                                                                                                                                                                                                                                        | The Crew MCP                                                                                                                                                                       |
+| `connect-rudderstack` (setup)                 | Connects a customer's existing RudderStack workspace to Crew so real events reach its Agents: checks what is already connected, creates the Crew webhook only when needed, picks the source and its events with the RudderStack MCP, has the user add a Webhook destination (in the RudderStack app, with Terraform or with rudder-cli) with a filtering transformation, tests the token with one event, and checks events arrive on both sides.                | The Crew MCP with webhook access (an admin or member sign-in, or a `setup` token), the RudderStack MCP (`rudder-core`) and a RudderStack login that can add destinations, Python 3 |
+| `lead-scoring` (play)                         | Builds an Agent that reads each lead's fit, role and intent separately, picks a tier (Hot, Warm, Cold) with its reasons, and routes it: Hot to sales in Slack, Warm to nurture, Cold recorded by webhook. Dry-runs it, runs it in Shadow and measures it against outcomes. Evals under `evals/`.                                                                                                                                                                | The Crew MCP, a Slack channel and a webhook channel; Customer.io for nurture; for the Fit enrichment, the workspace's Profile enrichment feature                                   |
+| `linkedin-outreach` (channel)                 | Turns a LinkedIn leads file into one Crew Agent over HeyReach: builds it, dry-runs it, runs it in Shadow, and hands the Live switch to a human.                                                                                                                                                                                                                                                                                                                 | The Crew MCP, a HeyReach channel (the workspace's HeyReach channel feature), Python 3                                                                                              |
+| `linkedin-campaign` (channel)                 | Runs the whole campaign: finds and checks leads with treg, creates the HeyReach campaigns, gives each lead a LinkedIn member id so research enrichments run, then builds the Agent with `linkedin-outreach`.                                                                                                                                                                                                                                                    | The above, plus treg, a HeyReach MCP or API key, `jq`, and the workspace's Profile enrichment feature                                                                              |
+| `calibrate` (step)                            | Runs an Agent Calibrate as a conversation: replays about ten of an Agent's recent decisions, shows them one card at a time, records what the user says was right or wrong, applies the answers to the working copy and reports what changed, then publishes to Shadow or hands Live to the editor.                                                                                                                                                              | The Crew MCP with the `calibrate_*` tools and `skills:write`; `users:read` to see a card's email and ids                                                                           |
+| `send-list` (lists)                           | Sends a list of people to an Agent: a Lookout audience or warehouse query, a Clay search, a CSV or a CRM export. People are known by email or LinkedIn profile. Drops people Crew already works on, has the user review the list on a page, dry-runs it on the Agent and lets them rate the messages, then sends in Shadow with the Agent's own trigger event. For a bigger list, or one that keeps growing, it sets up a RudderStack Reverse ETL sync instead. | The Crew MCP with `webhooks:write`, Python 3, a machine that can reach the Crew webhook, and the MCPs the list comes from (Lookout, ClickHouse, Clay, ...)                         |
+| Crew connection (`.mcp.json`)                 | Crew's hosted MCP at `https://crew.rudderstack.com/mcp`, with OAuth sign-in.                                                                                                                                                                                                                                                                                                                                                                                    |                                                                                                                                                                                    |
+| Body check (`hooks/`, Claude Code and Cowork) | After every Agent body write it hands Claude what `check_body.py` found, without blocking. claude.ai chat runs no hooks, so there the skills run the check themselves. The server creates every MCP-made Agent Off and never takes one Live over MCP, so the hook guards nothing about runtime state.                                                                                                                                                           | Python 3                                                                                                                                                                           |
+
+Inside the plugin each skill is named `crew:<skill>`, for example `/crew:workspace-setup`. Skills also fire on their own when a request matches their description.
+
+## How the skills fit together
+
+- **Foundation** answers "how do I author any Crew Agent?" Every other skill links into it rather than repeating it.
+- **Plays** answer "which signals, options and success event fit this use case?"
+- **Channels** answer "how do I set this channel up, what can a message carry, and what works on it?"
+- **Lists** answer "which people should this Agent work on?" `send-list` hands people to any Agent, whatever its channel.
+
+A play and a channel combine at use time: a play hands the people it picks to a channel skill. Neither copies the other.
+
+## Adding a skill
+
+One PR under `plugins/crew/skills/<name>/`. Before it merges:
+
+1. **One job.** Name it for the play or channel (`churn-deflection`, `customerio`), without a `crew-` prefix.
+2. **A description that triggers.** Use the words a user would say, including the customer-name-only ask ("make an agent for Acme"). Frontmatter uses only the Agent Skills keys (`name`, `description`, `license`, `compatibility`, `metadata`, `allowed-tools`); claude.ai refuses any other.
+3. **Link the foundation, never copy it.** Point at `workspace-setup` for the schema, message writing and `check_body.py`.
+4. **Any workspace, any machine.** No local paths, hosts or workspace ids; check the prerequisites (token scope, flags, channels) first.
+5. **Human-only steps stay human.** Credentials, flags and the Live switch go to a person.
+6. **Scripts are Python 3 standard library**, run by absolute path, and exit non-zero on a problem.
+7. **Every rule names its evidence**: the run that showed it, described generically ("in an onboarding-email Agent, the first dry run…"). Customers read every file here, so no customer or prospect names, workspace names, internal paths, PR numbers or dates.
+8. **Evals** under `evals/` for new skills: `claude plugin eval plugins/crew` runs each case with and without the plugin.
+9. **`claude plugin validate plugins/crew` passes**, and the PR bumps `version` in `.claude-plugin/plugin.json`.
+
+Internal tooling that customers should never see (demo prep, for example) stays a plain skill outside this plugin.

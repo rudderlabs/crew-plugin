@@ -1,0 +1,12 @@
+{
+  "name": "rudder-crew",
+  "description": "RudderCrew's Claude plugin: connect Claude to a Crew workspace and author Agents with it.",
+  "owner": { "name": "RudderStack" },
+  "plugins": [
+    {
+      "name": "crew",
+      "source": "./plugins/crew",
+      "description": "Connects Claude to a RudderCrew workspace and adds the skills that set it up and author its Agents."
+    }
+  ]
+}

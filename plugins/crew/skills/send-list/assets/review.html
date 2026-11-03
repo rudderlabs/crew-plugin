@@ -1,0 +1,583 @@
+<title>List review</title>
+<meta name="claude:viewport-fit-sides" content="cover" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link
+  rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Fira+Code:wght@400;500&display=swap"
+/>
+<style>
+  /* Layout: one column of person cards under a header that holds the counts and the Approve button. Theme: Ocean. */
+  :root {
+    --bg: #eaf5f6;
+    --surface: #ffffff;
+    --fg: #10262b;
+    --muted: #557277;
+    --line: #cfe3e5;
+    --accent: #0b6e79;
+    --accent-fg: #ffffff;
+    --good: #1d7a46;
+    --bad: #b4462a;
+    --dropped: #dfecee;
+    --li: #0a66c2;
+    --li-fg: #ffffff;
+    --display: 'Figtree', 'Segoe UI', system-ui, sans-serif;
+    --body: 'Figtree', 'Segoe UI', system-ui, sans-serif;
+    --mono: 'Fira Code', ui-monospace, Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) {
+      --bg: #0b1a24;
+      --surface: #122633;
+      --fg: #e2f1f3;
+      --muted: #92b2b8;
+      --line: #22404f;
+      --accent: #5fd0c6;
+      --accent-fg: #062320;
+      --good: #5cc48a;
+      --bad: #f08a6c;
+      --dropped: #0e202b;
+      --li: #3d8fe0;
+      --li-fg: #0d1420;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme='dark'] {
+    --bg: #0b1a24;
+    --surface: #122633;
+    --fg: #e2f1f3;
+    --muted: #92b2b8;
+    --line: #22404f;
+    --accent: #5fd0c6;
+    --accent-fg: #062320;
+    --good: #5cc48a;
+    --bad: #f08a6c;
+    --dropped: #0e202b;
+    --li: #3d8fe0;
+    --li-fg: #0d1420;
+    color-scheme: dark;
+  }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font: 15px/1.5 var(--body);
+  }
+  .wrap {
+    max-width: 860px;
+    margin: 0 auto;
+    padding-block: 24px 48px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    display: grid;
+    gap: 16px;
+  }
+  header {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px 24px;
+    align-items: end;
+    justify-content: space-between;
+  }
+  h1 {
+    font: 600 1.6rem/1.15 var(--display);
+    margin: 0;
+    text-wrap: balance;
+  }
+  .sub {
+    color: var(--muted);
+    margin: 4px 0 0;
+    font-variant-numeric: tabular-nums;
+  }
+  .bar {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  button {
+    font: 500 0.95rem var(--body);
+    border-radius: 6px;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--fg);
+    padding: 8px 14px;
+    cursor: pointer;
+  }
+  button:focus-visible,
+  textarea:focus-visible,
+  input:focus-visible,
+  a:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  button.primary {
+    background: var(--accent);
+    color: var(--accent-fg);
+    border-color: var(--accent);
+  }
+  button:disabled {
+    opacity: 0.55;
+    cursor: default;
+  }
+  .status {
+    font-size: 0.9rem;
+    color: var(--muted);
+  }
+  .status.done {
+    color: var(--good);
+    font-weight: 600;
+  }
+  .note-banner {
+    border: 1px solid var(--line);
+    background: var(--surface);
+    border-radius: 8px;
+    padding: 12px 14px;
+    color: var(--muted);
+  }
+  ol.people {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 12px;
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 14px 16px;
+    display: grid;
+    gap: 10px;
+    min-width: 0;
+  }
+  .card.dropped {
+    background: var(--dropped);
+  }
+  .card.dropped .who,
+  .card.dropped .why {
+    opacity: 0.5;
+  }
+  .top {
+    display: flex;
+    gap: 12px;
+    align-items: start;
+    justify-content: space-between;
+    flex-wrap: wrap;
+  }
+  .who {
+    min-width: 0;
+  }
+  .who a,
+  .who .name {
+    font-weight: 600;
+    color: var(--fg);
+  }
+  .who a {
+    text-decoration-color: var(--line);
+    text-underline-offset: 3px;
+  }
+  .role {
+    color: var(--muted);
+    font-size: 0.92rem;
+  }
+  .who .profile {
+    display: inline-flex;
+    gap: 6px;
+    align-items: center;
+    margin-top: 4px;
+    font: 400 0.82rem var(--mono);
+    color: var(--muted);
+    text-decoration: none;
+    overflow-wrap: anywhere;
+  }
+  a.profile:hover .profile-path {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .li-mark {
+    flex: none;
+    display: inline-grid;
+    place-items: center;
+    width: 16px;
+    height: 16px;
+    border-radius: 3px;
+    background: var(--li);
+    color: var(--li-fg);
+    font: 700 11px/1 var(--body);
+  }
+  .who .profile.missing {
+    color: var(--bad);
+  }
+  .keep {
+    display: inline-flex;
+    gap: 8px;
+    align-items: center;
+    font-size: 0.9rem;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .keep input {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--accent);
+  }
+  .lbl {
+    display: block;
+    font-size: 0.75rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+  textarea,
+  input[type='text'] {
+    width: 100%;
+    box-sizing: border-box;
+    font: 0.95rem/1.45 var(--body);
+    color: var(--fg);
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 8px 10px;
+    resize: vertical;
+  }
+  .sources {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 8px;
+  }
+  .src {
+    display: grid;
+    grid-template-columns: 6.5rem 1fr;
+    gap: 2px 12px;
+    align-items: baseline;
+  }
+  .src-name {
+    font: 500 0.75rem var(--mono);
+    color: var(--accent);
+    overflow-wrap: anywhere;
+  }
+  .src-body {
+    min-width: 0;
+    display: grid;
+    gap: 2px;
+  }
+  .src-why {
+    margin: 0;
+    font-size: 0.93rem;
+  }
+  .src-facts,
+  .src-basis {
+    margin: 0;
+    font: 0.78rem/1.45 var(--mono);
+    color: var(--muted);
+    overflow-wrap: anywhere;
+  }
+  /* `display: grid` below would otherwise beat the hidden attribute and show the rating controls before any dry run. */
+  .dry[hidden] {
+    display: none;
+  }
+  .dry {
+    border-top: 1px dashed var(--line);
+    padding-top: 10px;
+    display: grid;
+    gap: 8px;
+  }
+  .chip {
+    display: inline-block;
+    font: 500 0.78rem var(--mono);
+    padding: 2px 8px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    color: var(--muted);
+  }
+  .chip.act {
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+  .msg {
+    white-space: pre-wrap;
+    background: var(--bg);
+    border-radius: 6px;
+    padding: 10px 12px;
+    margin: 0;
+    font-size: 0.93rem;
+    overflow-wrap: anywhere;
+  }
+  .verdict {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .verdict button[aria-pressed='true'].good {
+    background: var(--good);
+    border-color: var(--good);
+    color: var(--accent-fg);
+  }
+  .verdict button[aria-pressed='true'].bad {
+    background: var(--bad);
+    border-color: var(--bad);
+    color: var(--accent-fg);
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    button,
+    .card {
+      transition:
+        background-color 120ms ease,
+        opacity 120ms ease;
+    }
+  }
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1 id="list-name">List review</h1>
+      <p class="sub" id="counts">Waiting for the list.</p>
+    </div>
+    <div class="bar">
+      <span class="status" id="status" role="status"></span>
+      <button class="primary" id="approve" type="button" disabled>Approve list</button>
+    </div>
+  </header>
+  <p class="note-banner" id="banner" hidden></p>
+  <ol class="people" id="people"></ol>
+  <p class="note-banner" id="empty">No people yet. Claude adds the list here, then asks you to review it.</p>
+</div>
+
+<script>
+  (async () => {
+    const $ = (id) => document.getElementById(id);
+    const cards = new Map();
+    let state = {};
+    let rows = [];
+    const db = await window.claude?.use?.('db');
+    if (!db) {
+      $('banner').textContent =
+        'This page needs the Claude app or claude.ai, signed in, to load the list. Open it there, or review the list in the chat.';
+      $('banner').hidden = false;
+      $('empty').hidden = true;
+      return;
+    }
+    const save = (id, data) =>
+      db
+        .doc('rows/' + id)
+        .update(data)
+        .catch(() => {
+          $('status').textContent = 'A change was not saved. Check your connection and try again.';
+        });
+
+    function el(tag, props = {}, ...kids) {
+      const n = document.createElement(tag);
+      Object.assign(n, props);
+      for (const k of kids) if (k != null) n.append(k);
+      return n;
+    }
+
+    function makeCard(id) {
+      const keep = el('input', { type: 'checkbox', id: 'keep-' + id });
+      keep.addEventListener('change', () => save(id, { keep: keep.checked }));
+      const why = el('textarea', { id: 'why-' + id, rows: 2 });
+      why.addEventListener('change', () => save(id, { why_now: why.value.trim() }));
+      const note = el('input', { type: 'text', id: 'note-' + id, placeholder: 'What should change in this message?' });
+      note.addEventListener('change', () => save(id, { note: note.value.trim() }));
+      const good = el('button', { type: 'button', className: 'good', textContent: 'Good' });
+      const bad = el('button', { type: 'button', className: 'bad', textContent: 'Needs work' });
+      good.addEventListener('click', () => save(id, { verdict: 'good' }));
+      bad.addEventListener('click', () => save(id, { verdict: 'bad' }));
+      const parts = {
+        keep,
+        why,
+        note,
+        good,
+        bad,
+        who: el('div', { className: 'who' }),
+        sources: el('ul', { className: 'sources' }),
+        chips: el('div', { className: 'verdict' }),
+        msg: el('p', { className: 'msg' }),
+      };
+      parts.dry = el(
+        'div',
+        { className: 'dry' },
+        parts.chips,
+        parts.msg,
+        el('div', { className: 'verdict' }, good, bad),
+        el('div', {}, el('label', { className: 'lbl', htmlFor: note.id, textContent: 'Note for Claude' }), note),
+      );
+      parts.whyPerson = el('div', {}, el('div', { className: 'lbl', textContent: 'Why this person' }), parts.sources);
+      parts.root = el(
+        'li',
+        { className: 'card' },
+        el('div', { className: 'top' }, parts.who, el('label', { className: 'keep', htmlFor: keep.id }, keep, 'Keep')),
+        parts.whyPerson,
+        el(
+          'div',
+          { className: 'why' },
+          el('label', { className: 'lbl', htmlFor: why.id, textContent: 'Why now' }),
+          why,
+        ),
+        parts.dry,
+      );
+      return parts;
+    }
+
+    // The same rules as send_leads.py: a linkedin_url, when there is one, is the person's identity
+    // (one that is not a profile is skipped, never sent by the email), else an email that passes
+    // Zod's default z.email() pattern, which Customer.io's dispatcher checks the recipient with.
+    const PROFILE = /^(?:https?:\/\/)?(?:[a-z]{2,3}\.)?(?:www\.)?linkedin\.com\/in\/([^/?#\s]+)\/?(?:[?#].*)?$/i;
+    const EMAIL =
+      /^(?:[A-Za-z0-9_'+\-]+\.)*[A-Za-z0-9_'+\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\-]*\.)+[A-Za-z]{2,}$/;
+    function fill(c, d) {
+      const rawUrl = typeof d.linkedin_url === 'string' ? d.linkedin_url.trim() : '';
+      const slug = rawUrl ? (PROFILE.exec(rawUrl) || [])[1] : undefined;
+      const url = slug ? `https://www.linkedin.com/in/${slug}` : null;
+      const email = !rawUrl && typeof d.email === 'string' && EMAIL.test(d.email.trim()) ? d.email.trim() : null;
+      const name = url
+        ? el('a', { href: url, target: '_blank', rel: 'noopener', textContent: d.name || 'Unnamed' })
+        : el('span', { className: 'name', textContent: d.name || 'Unnamed' });
+      const profile = url
+        ? el(
+            'a',
+            {
+              className: 'profile',
+              href: url,
+              target: '_blank',
+              rel: 'noopener',
+              ariaLabel: `LinkedIn profile of ${d.name || 'this person'}`,
+            },
+            el('span', { className: 'li-mark', ariaHidden: 'true', textContent: 'in' }),
+            el('span', {
+              className: 'profile-path',
+              textContent: url.replace(/^https:\/\/(www\.)?/, '').replace(/\/$/, ''),
+            }),
+          )
+        : email
+          ? el('span', { className: 'profile', textContent: email })
+          : el('span', {
+              className: 'profile missing',
+              textContent: rawUrl
+                ? 'linkedin_url is not a LinkedIn profile: this person will be skipped'
+                : 'No LinkedIn profile or email: this person will be skipped',
+            });
+      c.who.replaceChildren(
+        name,
+        el('div', { className: 'role', textContent: [d.title, d.company].filter(Boolean).join(' · ') }),
+        profile,
+      );
+      c.keep.checked = d.keep !== false;
+      c.root.classList.toggle('dropped', d.keep === false);
+      if (document.activeElement !== c.why) c.why.value = d.why_now || '';
+      // `sources`: one entry per source ({source, why, facts, basis}); a flat `evidence` object is the older shape.
+      const sources = Array.isArray(d.sources)
+        ? d.sources.filter((s) => s && typeof s === 'object')
+        : d.evidence && typeof d.evidence === 'object'
+          ? [{ source: 'Evidence', facts: d.evidence }]
+          : [];
+      c.sources.replaceChildren(
+        ...sources.map((s) => {
+          const facts = s.facts && typeof s.facts === 'object' ? Object.entries(s.facts) : [];
+          return el(
+            'li',
+            { className: 'src' },
+            el('span', { className: 'src-name', textContent: String(s.source || 'Source') }),
+            el(
+              'div',
+              { className: 'src-body' },
+              s.why ? el('p', { className: 'src-why', textContent: String(s.why) }) : null,
+              facts.length
+                ? el('p', {
+                    className: 'src-facts',
+                    textContent: facts.map(([k, v]) => `${k}: ${String(v)}`).join(' · '),
+                  })
+                : null,
+              s.basis ? el('p', { className: 'src-basis', textContent: `How: ${String(s.basis)}` }) : null,
+            ),
+          );
+        }),
+      );
+      c.whyPerson.hidden = sources.length === 0;
+      const dry = d.dry_run && typeof d.dry_run === 'object' ? d.dry_run : null;
+      c.dry.hidden = !dry;
+      if (dry) {
+        c.chips.replaceChildren(
+          el('span', {
+            className: 'chip' + (dry.action ? ' act' : ''),
+            textContent: dry.action || dry.decision || 'no action',
+          }),
+        );
+        c.msg.textContent = dry.message || (dry.reason ? 'No message. ' + dry.reason : 'No message.');
+        c.msg.hidden = false;
+        c.good.setAttribute('aria-pressed', String(d.verdict === 'good'));
+        c.bad.setAttribute('aria-pressed', String(d.verdict === 'bad'));
+        if (document.activeElement !== c.note) c.note.value = d.note || '';
+      }
+    }
+
+    function render() {
+      const kept = rows.filter((r) => r.data.keep !== false).length;
+      const tried = rows.filter((r) => r.data.dry_run).length;
+      const rated = rows.filter((r) => r.data.dry_run && r.data.verdict).length;
+      if (state.name) {
+        $('list-name').textContent = state.name;
+        document.title = state.name;
+      }
+      $('counts').textContent = rows.length
+        ? `${kept} of ${rows.length} people kept` + (tried ? ` · ${rated} of ${tried} messages rated` : '')
+        : 'Waiting for the list.';
+      $('empty').hidden = rows.length > 0;
+      const approved = state.status === 'approved';
+      $('approve').disabled = rows.length === 0 || approved;
+      const copy = state.stage === 'copy';
+      $('approve').textContent = copy ? 'Done rating' : 'Approve list';
+      $('status').textContent = approved
+        ? copy
+          ? 'Ratings saved. Tell Claude in the chat.'
+          : 'Approved. Tell Claude in the chat.'
+        : '';
+      $('status').classList.toggle('done', approved);
+      const list = $('people');
+      for (const { id, data } of rows) {
+        let c = cards.get(id);
+        if (!c) {
+          c = makeCard(id);
+          cards.set(id, c);
+        }
+        fill(c, data);
+        list.append(c.root);
+      }
+      for (const [id, c] of cards)
+        if (!rows.some((r) => r.id === id)) {
+          c.root.remove();
+          cards.delete(id);
+        }
+    }
+
+    $('approve').addEventListener('click', async () => {
+      $('approve').disabled = true;
+      try {
+        await db.doc('review/state').set({ ...state, status: 'approved', approved_at: new Date().toISOString() });
+      } catch {
+        $('status').textContent = 'Not approved: the change was not saved. Try again.';
+        $('approve').disabled = false;
+      }
+    });
+
+    db.collection('rows')
+      .orderBy('n')
+      .onSnapshot(
+        (snap) => {
+          rows = snap.docs.map((d) => ({ id: d.id, data: d.data() || {} }));
+          render();
+        },
+        () => {
+          $('banner').textContent = 'The list stopped loading. Reload the page.';
+          $('banner').hidden = false;
+        },
+      );
+    db.doc('review/state').onSnapshot((snap) => {
+      state = snap.exists ? snap.data() : {};
+      render();
+    });
+  })();
+</script>

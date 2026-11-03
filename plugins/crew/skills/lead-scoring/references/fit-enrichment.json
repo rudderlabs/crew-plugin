@@ -1,0 +1,66 @@
+{
+  "name": "<Company> · Company fit",
+  "method": "research",
+  "enabled": true,
+  "ttlSeconds": 7776000,
+  "config": {
+    "bindings": [],
+    "cardinality": "one",
+    "resultContract": "mapped",
+    "maxToolCalls": 10,
+    "allowedTools": [
+      {
+        "kind": "builtin",
+        "toolName": "web_search"
+      },
+      {
+        "kind": "builtin",
+        "toolName": "web_fetch"
+      }
+    ],
+    "brief": "Research the COMPANY this person works for, to judge whether it fits <Company>'s ideal customer. The company is the one in the base profile (traits.company or the organization they gave us); when there is none, use the domain of their work email. A free-mail domain (gmail.com, outlook.com and the like) names no company: leave every field empty. Use public business sources only: the company's own site, its careers page and job posts, press, and business directories. Never research the individual person or anyone's private data.\n\nFind:\n1. What the company sells and to whom, in one plain sentence.\n2. Its industry, from this list: <INDUSTRY OPTIONS, matching the industry output below>.\n3. Its size in employees, as the band a source supports.\n4. Whether it fits <Company>'s ICP: <ICP>. Answer strong, partial or no, and say why in one sentence that cites the source. Answer unknown when the sources do not settle it.\n\nRules: report only what a source states about this company. Leave a field empty rather than guess, and never write a sentence saying nothing was found.",
+    "outputs": [
+      {
+        "key": "business",
+        "label": "What they sell",
+        "type": "text",
+        "maxChars": 300,
+        "description": "One plain sentence: what the company sells and to whom. Empty when no source says so."
+      },
+      {
+        "key": "industry",
+        "label": "Industry",
+        "type": "select",
+        "options": ["<INDUSTRY_1>", "<INDUSTRY_2>", "<INDUSTRY_3>", "Other"],
+        "description": "The company's industry, from the list. Empty when no source says so."
+      },
+      {
+        "key": "employee_band",
+        "label": "Employees",
+        "type": "select",
+        "options": ["1-10", "11-50", "51-200", "201-1000", "1001-5000", "5000+"],
+        "description": "The employee band a source supports. Empty when no source says so."
+      },
+      {
+        "key": "icp_fit",
+        "label": "ICP fit",
+        "type": "select",
+        "options": ["strong", "partial", "no", "unknown"],
+        "description": "Whether the company fits the ICP in the brief."
+      },
+      {
+        "key": "fit_reason",
+        "label": "Why",
+        "type": "text",
+        "maxChars": 300,
+        "description": "One sentence on why, citing the source."
+      },
+      {
+        "key": "evidence_url",
+        "label": "Main source",
+        "type": "url",
+        "description": "The URL of the strongest source behind these fields."
+      }
+    ]
+  }
+}

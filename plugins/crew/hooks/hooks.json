@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "^mcp__.+__(agent_create|draft_save|draft_createNew|draft_createForSkill)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -I \"${CLAUDE_PLUGIN_ROOT}/hooks/crew_body_check.py\"",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  }
+}

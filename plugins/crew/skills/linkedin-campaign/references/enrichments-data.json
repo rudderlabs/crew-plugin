@@ -1,0 +1,120 @@
+[
+  {
+    "name": "<Launch> · Company data context",
+    "method": "research",
+    "enabled": true,
+    "ttlSeconds": 2592000,
+    "config": {
+      "bindings": [],
+      "cardinality": "one",
+      "resultContract": "mapped",
+      "maxToolCalls": 10,
+      "allowedTools": [
+        {
+          "kind": "builtin",
+          "toolName": "web_search"
+        },
+        {
+          "kind": "builtin",
+          "toolName": "web_fetch"
+        },
+        {
+          "connectionId": "<TAVILY_CONNECTION_ID or drop this entry>",
+          "toolName": "<Tavily search tool from mcp_listTools>"
+        }
+      ],
+      "brief": "Research the COMPANY in the base profile (traits.company; the person's title is only context) to learn how its customer data is organised today. Use public business sources only: the company's own site and engineering or data blog, its current job postings (data engineering, analytics engineering, data platform, data science, CRM and marketing technology roles usually name the warehouse and data tools the team uses: fetch one or two and read the requirements), vendor case studies and customer pages that name the company, press, and conference talks or podcasts by its data staff. Never research the individual person, their personal life, contact details or anyone's private data.\n\nFind, in this order:\n1. What the company sells and to whom, in one plain sentence.\n2. Its cloud data warehouse (Snowflake, BigQuery, Databricks, Redshift or similar), only when a source names it for this company.\n3. The data and customer-data tools it uses (for example dbt, Fivetran, Airflow, Segment, mParticle, RudderStack, Amplitude, Hightouch, Census, Braze, Iterable, Looker, Tableau), only when a source names them for this company.\n4. What a source says about how the company joins up customer data today: identity resolution, a customer 360 or single customer view, an identity graph, a CDP, or customers spread across several products, apps, devices, stores or subscriptions that have to be tied together. Only what a source states for this company.\n5. One public item from the last six months (<MONTH YEAR> or later) that a data or analytics leader there would care about: a data or engineering blog post, an open data, analytics-engineering or data-platform role, a launch that adds a new app, channel or product line, a data migration, or a talk by their data staff. Prefer the company's own open data or analytics role when there is one. Brand campaigns, celebrity or spokesperson news and general marketing news do not qualify. Nothing older qualifies; leave it empty rather than use an older item, and never use a menu, a price list or a routine product page.\n\nRules: report only what a source states about THIS company; a tool listed on its own job post counts, a generic industry claim does not. When unsure, leave the field empty rather than guess, and never fill a field with a sentence saying nothing was found: an empty field already says that. Prefer one strong source over several weak ones. Write facts plainly, no marketing language.",
+      "outputs": [
+        {
+          "key": "business",
+          "label": "What they sell",
+          "type": "text",
+          "maxChars": 300,
+          "description": "One plain sentence: what the company sells and to whom. Leave it empty when no source says so; never write a sentence saying nothing was found."
+        },
+        {
+          "key": "warehouse",
+          "label": "Cloud warehouse",
+          "type": "text",
+          "maxChars": 100,
+          "description": "The warehouse a source names for this company (e.g. Snowflake). Leave it empty when no source says so; never write a sentence saying nothing was found."
+        },
+        {
+          "key": "data_stack",
+          "label": "Data and customer-data tools",
+          "type": "text_list",
+          "description": "Data, customer-data and activation tools a source names for this company (e.g. dbt, Segment, Amplitude, Braze). Leave it empty when no source says so; never write a sentence saying nothing was found."
+        },
+        {
+          "key": "identity_context",
+          "label": "How customer data is joined up",
+          "type": "text",
+          "maxChars": 400,
+          "description": "What a source says about how the company ties customer data together today (identity resolution, a customer 360, a CDP, customers across several apps, devices or products). Leave it empty when no source says so; never write a sentence saying nothing was found."
+        },
+        {
+          "key": "company_talking_point",
+          "label": "Recent company item",
+          "type": "text",
+          "maxChars": 300,
+          "description": "One public item from the last six months that a data or analytics leader would care about, stated neutrally with its month. Leave it empty when no source says so; never write a sentence saying nothing was found."
+        },
+        {
+          "key": "evidence_url",
+          "label": "Main source",
+          "type": "url",
+          "description": "The URL of the strongest source behind these fields."
+        }
+      ]
+    }
+  },
+  {
+    "name": "<Launch> · Person work focus",
+    "method": "research",
+    "enabled": true,
+    "ttlSeconds": 2592000,
+    "config": {
+      "bindings": [],
+      "cardinality": "one",
+      "resultContract": "mapped",
+      "maxToolCalls": 10,
+      "allowedTools": [
+        {
+          "kind": "builtin",
+          "toolName": "web_search"
+        },
+        {
+          "kind": "builtin",
+          "toolName": "web_fetch"
+        },
+        {
+          "connectionId": "<TAVILY_CONNECTION_ID or drop this entry>",
+          "toolName": "<Tavily search tool from mcp_listTools>"
+        }
+      ],
+      "brief": "Find what this person publicly works on and talks about in their professional role. The base profile gives their name, title and company in traits; their LinkedIn handle is the part of userId after 'linkedin:' (linkedin:janedoe means linkedin.com/in/janedoe).\n\nSearch, in this order, and stop once you have one solid item:\n1. Their LinkedIn posts and articles: search `site:linkedin.com/posts/<handle>` and `site:linkedin.com/pulse \"<full name>\" <company>`.\n2. Talks, podcasts, webinars and interviews: search `\"<full name>\" <company> podcast`, `\"<full name>\" <company> webinar OR talk OR panel`, `\"<full name>\" <company> interview`.\n3. Anything they wrote on the company or engineering blog, Medium, Substack or a trade publication.\nTopics that matter most: data platforms and data engineering, analytics engineering and dbt, the warehouse, data modeling, identity resolution and customer data, a customer 360 or single customer view, experimentation, ML features, and, for marketing leaders, CRM, lifecycle, retention, segmentation, personalisation and working with data teams.\n\nIdentity: an item counts only when it clearly belongs to this person (same full name AND their current or a past company, or the same LinkedIn handle). Two people can share a name; when you cannot tell, use nothing.\n\nNever collect anything about their personal life, family, location, health, politics, contact details or anything that is not their public work. Do not infer opinions they have not stated. An item older than two years is fine for focus but say its year. When nothing qualifies, leave every field empty: an empty answer is a correct answer.",
+      "outputs": [
+        {
+          "key": "focus",
+          "label": "Public work focus",
+          "type": "text",
+          "maxChars": 300,
+          "description": "One sentence on what this person publicly talks about or works on in their role, from their own posts, talks or articles. Leave it empty when no source says so; never write a sentence saying nothing was found."
+        },
+        {
+          "key": "recent_public_item",
+          "label": "Recent public item",
+          "type": "text",
+          "maxChars": 300,
+          "description": "One specific item of theirs (post, talk, article, podcast): what it was about and its month and year. Leave it empty when no source says so; never write a sentence saying nothing was found."
+        },
+        {
+          "key": "evidence_url",
+          "label": "Source",
+          "type": "url",
+          "description": "The URL of the item the fields rest on."
+        }
+      ]
+    }
+  }
+]

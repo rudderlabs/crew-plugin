@@ -1,0 +1,12 @@
+{
+  "name": "crew",
+  "version": "0.6.1",
+  "description": "Connects Claude to a RudderCrew workspace and adds the skills that set it up and author its Agents: a foundation for any Agent, plays such as lead scoring, channels such as LinkedIn, and sending a list of people to an Agent.",
+  "author": {
+    "name": "RudderStack"
+  },
+  "homepage": "https://crew.rudderstack.com",
+  "repository": "https://github.com/rudderlabs/crew-plugin",
+  "privacyPolicyUrl": "https://www.rudderstack.com/privacy-policy/",
+  "keywords": ["rudderstack", "ruddercrew", "crew", "gtm", "agents"]
+}
