@@ -49,7 +49,7 @@ WITH raw AS (
   UNION ALL
   SELECT 'app',
          coalesce(t.context_traits_email, u.email),
-         lower(parse_url(t.context_page_url):host::string),
+         NULL,
          t.event,
          coalesce(t.user_id, t.anonymous_id),
          to_date(t.received_at)
@@ -74,7 +74,7 @@ ORDER BY people DESC, days DESC
 LIMIT 500
 ```
 
-Fill in the product's trial or plan events from step 1 (for example `trialStarted` and `trialCompleted`). App activity is every event in the app's source, server-side ones included; those carry no page URL, which is why the app half is matched by its source, not by a host. The email comes from `context_traits_email` or, failing that, the schema's `users` table; leave out whichever of the two a schema doesn't have. The `LIMIT` is there because some warehouse tools refuse a query without one, and it cuts the list: if exactly 500 rows come back, raise it before step 3 drops customers, or prospects past the cut never reach the list. Take step 3's segment counts from the same query without its `ORDER BY` and `LIMIT`, wrapped as `SELECT segment, count(*) AS accounts FROM (…) GROUP BY segment LIMIT 10`, never from the capped rows. If there is no app, leave out the `tracks` half, `app` and `segment`. The free-mail list is not complete: also drop any other free-mail domain you recognise (`rocketmail.com`, for example).
+Fill in the product's trial or plan events from step 1 (for example `trialStarted` and `trialCompleted`). App activity is every event in the app's source, server-side ones included; those carry no page URL, which is why the app half is matched by its source and reads no page URL at all. The email comes from `context_traits_email` or, failing that, the schema's `users` table; leave out whichever of the two a schema doesn't have. The `LIMIT` is there because some warehouse tools refuse a query without one, and it cuts the list: if exactly 500 rows come back, raise it before step 3 drops customers, or prospects past the cut never reach the list. Take step 3's segment counts from the same query without its `ORDER BY` and `LIMIT`, wrapped as `SELECT segment, count(*) AS accounts FROM (…) GROUP BY segment LIMIT 10`, never from the capped rows. If there is no app, leave out the `tracks` half, `app` and `segment`. The free-mail list is not complete: also drop any other free-mail domain you recognise (`rocketmail.com`, for example).
 
 ## 3. The user picks the accounts: stop here
 
