@@ -7,7 +7,7 @@ Ask for these, or use the defaults:
 | Input                  | Default                                             |
 | ---------------------- | --------------------------------------------------- |
 | Website host           | the company's `www.` host                           |
-| Product app host       | none                                                |
+| Product app's source   | none                                                |
 | Window                 | 30 days                                             |
 | What "top" means       | visits on 3 or more distinct days                   |
 | Which segments to keep | trial accounts and accounts that never used the app |
@@ -37,7 +37,8 @@ The query below is Snowflake; for another warehouse, swap the URL, date and stri
 
 ```sql
 WITH raw AS (
-  SELECT coalesce(p.context_traits_email, u.email) AS email,
+  SELECT 'site' AS src,
+         coalesce(p.context_traits_email, u.email) AS email,
          lower(parse_url(p.context_page_url):host::string) AS host,
          NULL AS ev,
          coalesce(p.user_id, p.anonymous_id) AS who,
@@ -46,7 +47,8 @@ WITH raw AS (
   LEFT JOIN <site schema>.users u ON u.id = p.user_id
   WHERE p.received_at > dateadd(day, -90, current_timestamp())
   UNION ALL
-  SELECT coalesce(t.context_traits_email, u.email),
+  SELECT 'app',
+         coalesce(t.context_traits_email, u.email),
          lower(parse_url(t.context_page_url):host::string),
          t.event,
          coalesce(t.user_id, t.anonymous_id),
@@ -55,14 +57,14 @@ WITH raw AS (
   LEFT JOIN <app schema>.users u ON u.id = t.user_id
   WHERE t.received_at > dateadd(day, -90, current_timestamp())),
 e AS (
-  SELECT lower(split_part(email, '@', 2)) AS dom, host, ev, who, d FROM raw WHERE email LIKE '%@%'),
+  SELECT src, lower(split_part(email, '@', 2)) AS dom, host, ev, who, d FROM raw WHERE email LIKE '%@%'),
 site AS (
   SELECT dom, count(DISTINCT d) AS days, count(DISTINCT who) AS people, count(*) AS events
-  FROM e WHERE host = '<site host>' AND d > dateadd(day, -<window>, current_date())
+  FROM e WHERE src = 'site' AND host = '<site host>' AND d > dateadd(day, -<window>, current_date())
   GROUP BY dom HAVING count(DISTINCT d) >= <min days>),
 app AS (
   SELECT dom, max(iff(ev IN ('<trial event>', '<another trial event>'), 1, 0)) AS trial
-  FROM e WHERE host = '<app host>' GROUP BY dom)
+  FROM e WHERE src = 'app' GROUP BY dom)
 SELECT site.dom, days, people, events,
        CASE WHEN app.dom IS NULL THEN 'never used app' WHEN app.trial = 1 THEN 'trial' ELSE 'app user' END AS segment
 FROM site LEFT JOIN app ON site.dom = app.dom
@@ -72,7 +74,7 @@ ORDER BY people DESC, days DESC
 LIMIT 500
 ```
 
-Fill in the product's trial or plan events from step 1 (for example `trialStarted` and `trialCompleted`). The email comes from `context_traits_email` or, failing that, the schema's `users` table; leave out whichever of the two a schema doesn't have. The `LIMIT` is there because some warehouse tools refuse a query without one, and it cuts the list: if exactly 500 rows come back, raise it before step 3 drops customers, or prospects past the cut never reach the list. Take step 3's segment counts from the same query without its `ORDER BY` and `LIMIT`, wrapped as `SELECT segment, count(*) AS accounts FROM (…) GROUP BY segment LIMIT 10`, never from the capped rows. If there is no app, leave out the `tracks` half, `app` and `segment`. The free-mail list is not complete: also drop any other free-mail domain you recognise (`rocketmail.com`, for example).
+Fill in the product's trial or plan events from step 1 (for example `trialStarted` and `trialCompleted`). App activity is every event in the app's source, server-side ones included; those carry no page URL, which is why the app half is matched by its source, not by a host. The email comes from `context_traits_email` or, failing that, the schema's `users` table; leave out whichever of the two a schema doesn't have. The `LIMIT` is there because some warehouse tools refuse a query without one, and it cuts the list: if exactly 500 rows come back, raise it before step 3 drops customers, or prospects past the cut never reach the list. Take step 3's segment counts from the same query without its `ORDER BY` and `LIMIT`, wrapped as `SELECT segment, count(*) AS accounts FROM (…) GROUP BY segment LIMIT 10`, never from the capped rows. If there is no app, leave out the `tracks` half, `app` and `segment`. The free-mail list is not complete: also drop any other free-mail domain you recognise (`rocketmail.com`, for example).
 
 ## 3. The user picks the accounts: stop here
 
