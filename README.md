@@ -69,7 +69,7 @@ Installing plugin "crew@rudder-crew"...
 
 $ claude plugin list
   ❯ crew@rudder-crew
-    Version: 0.6.1
+    Version: 0.6.3
     Scope: user
     Status: ✔ enabled
 ```
