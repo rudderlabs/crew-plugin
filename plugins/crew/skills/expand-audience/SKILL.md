@@ -39,7 +39,7 @@ Stop here until they confirm. Nothing is built from a plan alone.
 - `channels_list`: a HeyReach channel and its `settings.profile_url_identifier`; an email channel (`customerio`, or `email` over Gmail, Resend or SES) if they want email too; a webhook channel named like a loopback.
 - `webhooks_list`: a webhook named `Crew loopback`, and a `rudderstack`-format webhook the seed can be sent to (`send-list` § 5); for a feed seed, the feed's webhook and its mapping.
 - `catalog_list`: the seed event (a feed) and the outcome event.
-- `agent_list`: no other running Agent triggers on the seed event or the lead event. Two Agents on one event both act.
+- `agent_list`: no other running Agent triggers on the seed event, the lead event or `identify`. Two Agents on one event both act, and every CSV send writes an identify per row before its track, which Crew exposes as the `identify` event (`send-list` § 4), so a Live Agent on it would message these people during what is meant to be a Shadow run.
 
 ## 3. Prepare the seed
 
