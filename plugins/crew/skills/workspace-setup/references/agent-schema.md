@@ -67,10 +67,10 @@ Note on `agentPrompt`: its schema comment says it reaches Act content generation
 
 An action is split across two arrays, joined by `id`:
 
-|            | `decisionLogic.actionPolicies[]`                                           | `availableActions[]`                                                                |
-| ---------- | -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| Holds      | routing: which act owns it, which channel, Decide's per-action eligibility | content: who it's from, what to write, which fields                                 |
-| Key fields | `id`, `actId`, `action` (display name), `channelId` or `channelType`       | `id` (same as the policy's), `type` (same as `action`), `sender`, `payloadTemplate` |
+|            | `decisionLogic.actionPolicies[]`                                                                                                    | `availableActions[]`                                                                |
+| ---------- | ----------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| Holds      | routing: which act owns it and which channel; `eligibility` is a description for people, and channel rules go in `priorityGuidance` | content: who it's from, what to write, which fields                                 |
+| Key fields | `id`, `actId`, `action` (display name), `channelId` or `channelType`                                                                | `id` (same as the policy's), `type` (same as `action`), `sender`, `payloadTemplate` |
 
 **The message instructions are `availableActions[].payloadTemplate.prompt`** (1–10,000 characters). This is the "Message instructions" box in the UI editor. Its siblings:
 
