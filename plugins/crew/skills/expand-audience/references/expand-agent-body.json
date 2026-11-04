@@ -13,7 +13,7 @@
         "conditions": [
           {
             "property": "company_domain",
-            "operator": "!contains",
+            "operator": "!=",
             "value": "<OWN_DOMAIN>"
           }
         ]

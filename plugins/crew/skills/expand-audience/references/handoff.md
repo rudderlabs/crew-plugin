@@ -6,7 +6,7 @@ Expand decides about a company. Outreach decides about a person. The step betwee
 
 ## 1. The loopback webhook
 
-Create it with `webhooks_create` (needs `webhooks:write`), with the user's yes, since a webhook cannot be removed over MCP. Before that, look for one named `Crew loopback` in `webhooks_list` and compare its mapping to the one below: reuse it only when the paths match, because a loopback with another mapping mints nobody, or the wrong person, and nothing says so. Read `<PROFILE_IDENTIFIER>` from the HeyReach channel's `settings.profile_url_identifier` in `channels_list` (usually `linkedin_url`): HeyReach sends to the identifier named there, so a mapping that names another one sends to nobody.
+Create it with `webhooks_create` (needs `webhooks:write`), with the user's yes, since a webhook cannot be removed over MCP. Before that, look for one named `Crew loopback` in `webhooks_list` and compare its mapping to the one below: reuse it only when the paths match, because a loopback with another mapping mints nobody, or the wrong person, and nothing says so, and only when its file `~/crew-lists/webhooks/<webhookId>.env` is on this machine: the token is answered once, at creation, and can be read again neither over MCP nor in the app, and the step 7 replay posts with it. A loopback whose file is missing is of no use here, so with the user's yes create a new one, and the user points the channel at it (§ 2). Read `<PROFILE_IDENTIFIER>` from the HeyReach channel's `settings.profile_url_identifier` in `channels_list` (usually `linkedin_url`): HeyReach sends to the identifier named there, so a mapping that names another one sends to nobody.
 
 ```json
 {
@@ -49,7 +49,7 @@ sed -n 's/^CREW_WEBHOOK_URL=//p' ~/crew-lists/webhooks/<webhookId>.env | pbcopy
 sed -n 's/^CREW_WEBHOOK_TOKEN=/Bearer /p' ~/crew-lists/webhooks/<webhookId>.env | pbcopy
 ```
 
-Then `channels_list` for the new channel's id: that is `<LOOPBACK_CHANNEL_ID>` in the Expand body. A workspace that already has a webhook channel pointing at a loopback webhook reuses it; check the name, since the MCP never shows a channel's URL.
+Then `channels_list` for the new channel's id: that is `<LOOPBACK_CHANNEL_ID>` in the Expand body. A workspace that already has a webhook channel pointing at the loopback you are using reuses it; the MCP never shows a channel's URL, so check the name and ask the user when in doubt, and when the loopback is new the user updates the channel's URL and header to it.
 
 ## 3. The lead event name
 

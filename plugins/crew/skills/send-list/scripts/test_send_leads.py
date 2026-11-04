@@ -51,9 +51,12 @@ class AccountMode(unittest.TestCase):
         self.assertEqual(len(problems), 1)
         self.assertIn("row 2", problems[0][1])
 
-    def test_account_id_column_wins(self):
+    def test_account_id_column_never_changes_the_key(self):
+        # account-agents.md: the key must never equal a person's user id, so an id column
+        # from a CRM rides along as a property and the key stays account:<domain>.
         leads, _ = m.prepare([{"company_domain": "acme.com", "id": "crm-42"}], 2, entity="account")
-        self.assertEqual(leads[0]["user_id"], "crm-42")
+        self.assertEqual(leads[0]["user_id"], "account:acme.com")
+        self.assertEqual(leads[0]["props"]["id"], "crm-42")
 
     def test_account_payloads_have_no_external_id(self):
         leads, _ = m.prepare([{"company_domain": "acme.com"}], 2, entity="account")

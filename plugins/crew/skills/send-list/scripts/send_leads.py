@@ -203,12 +203,13 @@ def prepare_accounts(rows, first):
             problems.append((n, f"same company as row {seen[domain]}"))
             continue
         seen[domain] = n
-        key = f"account:{domain}"
-        user_id = str(text(row.get("id") or "") or key)
+        # Always the namespaced key, whatever the row says: an id column could equal a
+        # person's user id, and the key names the account's window and its counts.
+        user_id = f"account:{domain}"
         props = {}
         for column, value in row.items():
             value = text(value)
-            if column == "id" or value in (None, ""):
+            if value in (None, ""):
                 continue
             props[column] = value
         props["company_domain"] = domain

@@ -1,7 +1,7 @@
 ---
 name: expand-audience
 description: Use when someone has a list of companies, accounts or firms and wants Crew to find the right person at each and reach out, when they say "find the right person at these companies", "expand my audience from this list", "I have a list of companies to reach", or "set up a personal outreach agent from my contacts or LinkedIn connections", when they paste a multi-part outreach plan (contact intelligence, outreach, follow-up, content) and ask whether Crew can do it, or when a visitor-identification feed names companies and they want the people there.
-compatibility: Needs the Crew MCP on the user's workspace with webhooks:write (an "Agent setup" token, or a role with it), Python 3, a machine that can reach the Crew webhook (Claude Code or Cowork), the sibling skills send-list and linkedin-outreach (the crew plugin installs all three), and for LinkedIn a HeyReach channel, a workspace feature the RudderStack team enables on request.
+compatibility: Needs the Crew MCP on the user's workspace with webhook access (an admin or member sign-in, or a `setup` token), Python 3, a machine that can reach the Crew webhook (Claude Code or Cowork), the sibling skills send-list and linkedin-outreach (the crew plugin installs all three), and for LinkedIn a HeyReach channel, a workspace feature the RudderStack team enables on request.
 ---
 
 # Expand an audience: from accounts to the right people
@@ -51,7 +51,7 @@ Follow the recipe: [accounts-csv.md](references/seeds/accounts-csv.md), [people-
 
 ## 5. Build the Expand Agent
 
-Read `agent_bodySchema`, then fill [references/expand-agent-body.json](references/expand-agent-body.json): every `<PLACEHOLDER>` (the trigger's `when` holds one condition per domain, so a user with two own domains gets two conditions), the roles list cut to the user's titles, and `web_search` and `web_fetch` added to `agentToolNames` when the workspace has web search. Without them the fit signal has only the event and what the model already knows about the company: in a test run on a workspace without web search, two large consultancies passed and a mid-size one was held "for lack of evidence about its services". When the workspace has no web search, say so to the user and expect lesser-known firms to be held. For a feed seed, rewrite the trigger as `visitor-feed.md` says. Keep `requiredOutputFields` and the guardrails as they are: they are why a decision that found nobody mints nobody, and why one company is researched once a week.
+Read `agent_bodySchema`, then fill [references/expand-agent-body.json](references/expand-agent-body.json): every `<PLACEHOLDER>` (the trigger's `when` holds one `!=` condition per own domain, compared exactly against the bare domain the send script writes: `contains` would also drop every unrelated domain that ends in it, and a user with two own domains gets two conditions), the roles list cut to the user's titles, and `web_search` and `web_fetch` added to `agentToolNames` when the workspace has web search. Without them the fit signal has only the event and what the model already knows about the company: in a test run on a workspace without web search, two large consultancies passed and a mid-size one was held "for lack of evidence about its services". When the workspace has no web search, say so to the user and expect lesser-known firms to be held. For a feed seed, rewrite the trigger as `visitor-feed.md` says. Keep `requiredOutputFields` and the guardrails as they are: they are why a decision that found nobody mints nobody, and why one company is researched once a week.
 
 Run it through `check_body.py` (the `workspace-setup` skill's `scripts/`; a warning about `research_account`'s classification is expected, since it is a built-in read), then `agent_create`, then `agent_get` to read the id and action id Crew minted.
 
@@ -63,7 +63,7 @@ Show a table: account, person found, title, matched role, why, or why held. Look
 
 ## 7. Build the Outreach Agent
 
-Load `linkedin-outreach` and give it: the lead event name `<LEAD_EVENT>`, the fact that a lead arrives with `name`, `title` and `company` as traits and the Expand decision's fields under `properties.decisionOutput.payload`, the launch facts, the outcome, and `people.csv` as its leads file. Its lead trigger stays bare, as its template has it (`handoff.md` § 4 says why). Every action keeps `needsApproval: true`. Sending is done here, in step 8, with `send-list`'s script: skip its own step 7 send, whose script takes different flags, and give it `people.csv` only so its dry run has real rows.
+Load `linkedin-outreach` and give it: the lead event name `<LEAD_EVENT>`, the fact that a lead arrives with `name`, `title` and `company` as traits and the Expand decision's fields under `properties.decisionOutput.payload`, the launch facts, the outcome, and `people.csv` as its leads file. Its lead trigger stays bare, as its template has it (`handoff.md` § 4 says why). Every action keeps `needsApproval: true`. Sending is done here, in step 8, with `send-list`'s script: skip its own step 7 send, whose script takes different flags, and give it `people.csv` as its leads file only so its dry run has real rows. An accounts-only seed has no `people.csv`: then write the people step 6 found to `found-dryrun.csv` in the list folder, with the columns `handoff.md` § 7 names, and give it that file instead; every `people.csv` send below applies only when the seed had known contacts.
 
 When the workspace has an email channel and `people.csv` carries emails, add one email action to the same Agent, `needsApproval: true`. Its message instructions have three parts and nothing else: one plain observation about a decision the person's team makes about its own customers (who the customer is, what they just did, the choice the team then faces), one sentence on what we do with exactly that choice, one open question they can answer in a line. Nothing beyond the launch facts, no flattery, no link. Email reaches known contacts only: research returns no email, and the recipient comes from the person's email trait alone.
 
@@ -71,7 +71,7 @@ When the workspace has an email channel and `people.csv` carries emails, add one
 
 A Shadow Agent posts nothing on any channel, the loopback included, so Expand in Shadow does not feed Outreach by itself.
 
-1. `agent_update` both Agents to `shadow`. Send 10 to 20 rows first:
+1. `agent_update` both Agents to `shadow`. Send 10 to 20 accounts first, and the known contacts when the seed has them:
 
    ```bash
    python3 -I <send-list>/scripts/send_leads.py --env ~/crew-lists/webhooks/<webhookId>.env --file accounts.csv --event "<SEED_EVENT>" --entity account --pass shadow --limit 20
@@ -79,6 +79,8 @@ A Shadow Agent posts nothing on any channel, the loopback included, so Expand in
    ```
 
    Both go to a `rudderstack`-format webhook, the one `send-list` § 5 picks (an existing one, or a `Lists` webhook), never to the loopback: its custom mapping reads `action` and `decisionId`, which an identify or a track does not carry, so a seed sent there decides nothing. Only the replay in move 2 uses the loopback's file. `send-list` §§ 5 and 7 say how a send is run so the user sees it. After a few minutes, `analytics_list` for Expand (`mode: "shadow"`, `outcomes` including `delivered`, `no_action`, `blocked`, `failed`), then `analytics_get` per decision: show who was found at each account, and each hold or refusal with its reason.
+
+   With the user's yes on that sample, send the rest of `accounts.csv`: the same command without `--limit`. The first rows go out again under the same message ids, which Crew ignores, so nothing is researched twice. Read the new decisions the same way. Nothing later sends an account: step 9 replays only what Shadow found, and switching Expand Live acts on new events alone, so an account that never went to Shadow gets no decision at all.
 
 2. Replay the found people into the loopback (`handoff.md` § 7): `found.csv`, then `send_leads.py --body references/loopback-body.json --pass shadow`. Outreach decides on them and on `people.csv` in Shadow; show what each person would have received, as `linkedin-outreach` § 7 does.
 
@@ -88,7 +90,7 @@ Tell the user to do these, in this order, with the reasons:
 
 1. **Check approval is real.** With the workspace's approval-before-send feature off, `needsApproval: true` is accepted and ignored, and nothing over MCP shows the feature. Open one Outreach action in the editor: the "needs approval" switch on the action card shows only when the feature is on. No switch means ask the RudderStack team before going Live.
 2. **Switch Outreach Live** in the editor.
-3. **Replay `found.csv` with `--pass live`**, and send `people.csv` again with `--pass live`. Live acts only on new events, a repeated pass is a duplicate Crew ignores, and the replay costs no second research.
+3. **Replay `found.csv` with `--pass live`**, and send `people.csv` again with `--pass live` when there is one. Live acts only on new events, a repeated pass is a duplicate Crew ignores, and the replay costs no second research.
 4. **Read Expand's Shadow `linkedin_url` values once more** (`analytics_get`): every one is a `linkedin.com/in/` profile. A blank one was refused, but a wrong value (a company page, a placeholder word) would post Live and mint a person keyed by nothing better than the decision id. Then **switch Expand Live**, so new seed rows flow end to end from now on. Its only action posts to Crew's own webhook; Live Expand reaches no person.
 
 The Decisions page and its pending approvals list are the one place to see what is waiting. To stop everything at once: `agent_update` to `off` on both Agents.
