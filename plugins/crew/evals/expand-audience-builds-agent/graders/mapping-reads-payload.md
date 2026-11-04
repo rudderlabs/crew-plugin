@@ -1,5 +1,5 @@
 ---
 type: regex
 target: { source: file, path: loopback-mapping.json }
-pattern: 'decisionOutput\.payload\.linkedin_url'
+pattern: '"user_id"[^{}]*"decisionOutput\.payload\.linkedin_url"|"decisionOutput\.payload\.linkedin_url"[^{}]*"user_id"'
 ---

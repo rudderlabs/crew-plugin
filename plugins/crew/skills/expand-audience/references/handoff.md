@@ -42,14 +42,14 @@ No `externalIds`, so the mapping needs no workspace feature. Crew stores a Linke
 
 ## 2. The loopback channel
 
-Channels cannot be created over MCP. The user adds one in Settings → Channels: type Webhook, name `Crew loopback`, URL the webhook's URL, one header `Authorization` with value `Bearer <token>`. Give them two clipboard commands that read the file, one for the URL and one for the header value, so nothing is pasted into the chat:
+Channels cannot be created over MCP. The user adds one in Settings → Channels: type Webhook, name `Crew loopback`, URL the webhook's URL, one header `Authorization` with value `Bearer <token>`. Give them two clipboard commands that read the file, one for the URL and one for the header value, so nothing is pasted into the chat (`pbcopy` is macOS; `xclip -selection clipboard` or `wl-copy` on Linux, `clip` on Windows):
 
 ```bash
 sed -n 's/^CREW_WEBHOOK_URL=//p' ~/crew-lists/webhooks/<webhookId>.env | pbcopy
 sed -n 's/^CREW_WEBHOOK_TOKEN=/Bearer /p' ~/crew-lists/webhooks/<webhookId>.env | pbcopy
 ```
 
-Then `channels_list` for the new channel's id: that is `<LOOPBACK_CHANNEL_ID>` in the Expand body. A workspace that already has a webhook channel pointing at the loopback you are using reuses it; the MCP never shows a channel's URL, so check the name and ask the user when in doubt, and when the loopback is new the user updates the channel's URL and header to it.
+Then `channels_list` for the new channel's id: that is `<LOOPBACK_CHANNEL_ID>` in the Expand body. A workspace that already has a webhook channel named like a loopback may reuse it, but only once the user has opened it in Settings → Channels and checked it: the URL is this webhook's (`/webhook/<webhookId>/events`, the id in the file's name) and the `Authorization` header is set again from the file, since the MCP shows neither a channel's URL nor its headers. The name proves nothing. Shadow never posts through the channel and the replay posts with the file directly, so a channel pointing at an old webhook passes every check before Live and is found out only by Live Expand's first decision, which SKILL.md step 9 checks for that reason.
 
 ## 3. The lead event name
 
@@ -65,7 +65,7 @@ A track named `<LEAD_EVENT>` whose properties are the whole body Crew posted (`a
 
 ## 6. One Expand decision is one person
 
-An Expand decision hands over one person. To reach a second person at the same account, send that account again after the dedup window (72 hours by default), or raise the limits in `guardrails`. The user can also pick from the Shadow results and send those people in person mode.
+An Expand decision hands over one person. To reach a second person at the same account, send that account again a week later under a new `--pass` (the template allows one action per account per week, and the same pass is a duplicate Crew ignores however much time has passed), or raise the limits in `guardrails`. The user can also pick from the Shadow results and send those people in person mode.
 
 ## 7. The replay: feeding Outreach from Expand's Shadow decisions
 
