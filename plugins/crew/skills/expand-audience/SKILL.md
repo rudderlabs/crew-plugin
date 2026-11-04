@@ -51,7 +51,7 @@ Follow the recipe: [accounts-csv.md](references/seeds/accounts-csv.md), [people-
 
 ## 5. Build the Expand Agent
 
-Read `agent_bodySchema`, then fill [references/expand-agent-body.json](references/expand-agent-body.json): every `<PLACEHOLDER>`, the roles list cut to the user's titles, and `web_search` and `web_fetch` added to `agentToolNames` when the workspace has web search (the fit signal then reads what the company does). For a feed seed, rewrite the trigger as `visitor-feed.md` says. Keep `requiredOutputFields` and the guardrails as they are: they are why a decision that found nobody mints nobody, and why one company is researched once a week.
+Read `agent_bodySchema`, then fill [references/expand-agent-body.json](references/expand-agent-body.json): every `<PLACEHOLDER>`, the roles list cut to the user's titles, and `web_search` and `web_fetch` added to `agentToolNames` when the workspace has web search. Without them the fit signal has only the event and what the model already knows about the company: in a test run on a workspace without web search, two large consultancies passed and a mid-size one was held "for lack of evidence about its services". When the workspace has no web search, say so to the user and expect lesser-known firms to be held. For a feed seed, rewrite the trigger as `visitor-feed.md` says. Keep `requiredOutputFields` and the guardrails as they are: they are why a decision that found nobody mints nobody, and why one company is researched once a week.
 
 Run it through `check_body.py` (the `workspace-setup` skill's `scripts/`; a warning about `research_account`'s classification is expected, since it is a built-in read), then `agent_create`, then `agent_get` to read the id and action id Crew minted.
 
@@ -59,7 +59,7 @@ Run it through `check_body.py` (the `workspace-setup` skill's `scripts/`; a warn
 
 `preview_tryEvent` once, with five accounts from the seed as a list in `event`, one of them a company that should be held. Each event: the seed event name, `userId` `account:<domain>`, the row's columns as properties, and the company under `context.traits.company` as `{"name", "domain"}`, since the tool has no `traits` field. A dry run spends model and research budget but sends nothing.
 
-Show a table: account, person found, title, matched role, why, or why held. Look for a wrong hold, a person outside the roles, and a built or guessed profile URL. Change the goal, roles or fit rule in a draft (`draft_createForSkill`, `preview_tryEvent` with the `draftId`, `draft_publish`) until the picks look right. **Stop here until the user approves the picks.**
+Show a table: account, person found, title, matched role, why, or why held. Look for a wrong hold, a person outside the roles, and a built or guessed profile URL. A run of refusals ("linkedin_url had no value") means research found nobody with a profile link for those titles: in a test run three small firms all came back empty for three narrow partnership titles while larger firms matched at once. Widen the titles to the variants such people actually carry (an Alliance Manager, a Partner Manager) or the goal, before blaming the list. Change the goal, roles or fit rule in a draft (`draft_createForSkill`, `preview_tryEvent` with the `draftId`, `draft_publish`) until the picks look right. **Stop here until the user approves the picks.**
 
 ## 7. Build the Outreach Agent
 

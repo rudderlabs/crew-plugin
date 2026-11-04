@@ -385,7 +385,8 @@ def main():
     if not host:
         print(f"the URL in {args.env} must be https (plain http only to this machine)", file=sys.stderr)
         return 2
-    print(f'sending {len(leads)} leads to {host} as "{args.event}" ({args.run})')
+    noun = "accounts" if args.entity == "account" else "leads"
+    print(f'sending {len(leads)} {noun} to {host} as "{args.event}" ({args.run})')
 
     failed = 0
     batches = [build(lead) for lead in leads]
@@ -395,7 +396,7 @@ def main():
             if not ok:
                 failed += 1
                 print(f"{lead['user_id']}: event failed, {status}")
-        print(f"sent {len(leads)} leads ({args.run}), {failed} calls failed")
+        print(f"sent {len(leads)} {noun} ({args.run}), {failed} calls failed")
         return 1 if failed else 0
     for step, index in (("identify", 0), ("track", 1)):
         if step == "track" and leads:
@@ -405,7 +406,7 @@ def main():
             if not ok:
                 failed += 1
                 print(f"{lead['user_id']}: {step} failed, {status}")
-    print(f"sent {len(leads)} leads ({args.run}), {failed} calls failed")
+    print(f"sent {len(leads)} {noun} ({args.run}), {failed} calls failed")
     return 1 if failed else 0
 
 
