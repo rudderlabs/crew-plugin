@@ -11,6 +11,7 @@ Read this before writing any agent content.
 - [Write readings a person would say](#write-readings-a-person-would-say)
 - [Prefer several named signals over one composite](#prefer-several-named-signals-over-one-composite)
 - [Decide: constraints and options](#decide-constraints-and-options)
+- [One home per rule](#one-home-per-rule)
 - [Act: actions and cadence](#act-actions-and-cadence)
 - [Timing](#timing)
 - [Shadow mode](#shadow-mode)
@@ -50,8 +51,9 @@ A signal's reading is what an operator and a prospect read on the Decisions page
 - Ask for one to three plain sentences, and end with "Put the whole reading in ONE evidence entry, as a single paragraph, not one entry per sentence." The UI renders each evidence entry as a bullet.
 - A graded signal opens with a plain word or phrase ("Team buyer:", "Not an MQL:", "Expert:"), then says why. Refer to those words in priority guidance, options and hard constraints ("when Buying For says Covered…").
 - Name sources in passing ("according to LinkedIn", "they told us"), never as tags, and forbid internal field and tool names (enrichment, employee_band…).
-- Ask for the decision rationale as two to four plain sentences. If the writer must reuse exact facts (a proof point, a call-to-action key), end the rationale with one natural sentence that names them ("For proof, use … The call to action is book_call.").
+- Ask for the decision rationale as two to four plain sentences. Open it with the chosen option's exact name, or "Hold", and have Decide list every other option by its exact name among the alternatives. If the writer must reuse exact facts (the item, a proof point, a call-to-action key), end the rationale with one natural sentence that names them ("Brief for the writer: … The button is book_call."), and keep it last. When one Agent's rationale named the channel after that sentence, the writer lost the hand-off in 5 of 28 sends and invented a call to action.
 - Name each signal for what it reads, never with a product term ("Who They Are", not "Digital Twin").
+- Prompts are read by people too: the team opens them in the editor. Use Markdown headings and bullets where Crew keeps newlines: the Approach (`agentPrompt`), priority guidance, message instructions and brand voice. Signals, option conditions and hard constraints are flattened to one line before the model reads them, so a heading or bullet there runs into the text around it; use bold at most (`check_body.py` warns). What the models write stays plain: readings and the rationale are prose, and a draft follows its field's format.
 
 Renaming a signal does not rename the readings on past decisions, so settle names before the first decisions you want to keep.
 
@@ -81,6 +83,25 @@ Design them to be **collectively exhaustive and mutually distinguishable** acros
 
 Preference conditions should describe _the situation_, not restate the option name. "High risk from falling momentum or an at-risk history, reachable, and enough time remaining" is usable. "When high-risk sequence is appropriate" is circular.
 
+## One home per rule
+
+Each field has one reader and one job. A rule written in two places drifts, and a rule written where its reader can't see it does nothing. In a shopper follow-up Agent, every option carried copy and call-to-action keys as well as its condition, and which model read which field was guesswork; it took ten versions to settle.
+
+| Field                                                              | Read by                                  | Holds                                                                                                                                 | Never holds                                                                                                                |
+| ------------------------------------------------------------------ | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Approach (`agentPrompt`)                                           | Decide; never the writer or the judge    | The business, the data, the style every reading shares, how to write the rationale and its hand-off sentence, which product fits when | Copy instructions; the option list restated                                                                                |
+| Signal (`skills[].promptFragment`)                                 | Decide, by the signal's id, on one line  | One question, its opening words, what counts as evidence. Open with the signal's own name: Decide sees the id, not the name           | Routing ("so send X"); headings or bullets                                                                                 |
+| `priorityGuidance`                                                 | Decide                                   | The order to decide in: reasons to stop, too soon, which message, channel last                                                        | The options' conditions; calls to action; copy                                                                             |
+| Option `name`                                                      | Decide; the decision's title on its page | What the Agent decided to do, in the words the team uses                                                                              | Channel; keys; internal labels                                                                                             |
+| Option `whenToPrefer`                                              | Decide, on one line                      | The condition: the trigger, and which readings say what                                                                               | Products, call-to-action keys, copy, channel                                                                               |
+| `hardConstraints[].condition`                                      | Decide and the judge, on one line        | Short pattern checks over the profile and the draft                                                                                   | Anything that needs events, earlier decisions or several steps of reasoning: the judge sees no events or earlier decisions |
+| `actionPolicies[].eligibility`                                     | People                                   | A description for people; put channel rules in priority guidance                                                                      | Conditions or channel rules                                                                                                |
+| `goal`                                                             | People, not the models that decide       | What the Agent is for                                                                                                                 | Rules                                                                                                                      |
+| Message instructions (`availableActions[].payloadTemplate.prompt`) | The writer                               | How each message is written; products as the catalogue words them; fields, shapes, avoid list                                         | Which item, product or message to choose                                                                                   |
+| `brandVoice`                                                       | The writer; the judge as advice          | Tone and banned words                                                                                                                 | Message-specific rules                                                                                                     |
+
+The option list order is the priority order: Decide picks the first option whose condition holds, unless the priority guidance says otherwise. Before the first dry run, have a second reader (a person, or another model) check the body against this table.
+
 ## Act: actions and cadence
 
 Actions carry the channel and the message generation. **Every action that produces words for a person needs message instructions** (`availableActions[].payloadTemplate.prompt`); an action without them decides and then generates nothing. The instructions cover:
@@ -103,6 +124,8 @@ Voice that applies to every action goes in the agent's `brandVoice`. The harness
 **The exception: facts that land just after the trigger.** A signup is often followed within a minute or two by the onboarding answers or a quiz, and a decision made at the trigger misses them. A short debounce fixes that: `scheduling.triggerDelay` (for example `"2m"`) holds the decision, and a repeat trigger for the same person pushes it back. Keep it well under 15 minutes. Events kept under an anonymous id that has not itself matched a trigger, such as a website quiz when the trigger comes from the backend, are dropped after 15 minutes.
 
 Spacing lives in the follow-up configuration. Note the edge case: fixed day-based gaps don't fit windows measured in hours. When the use case spans both — some entities acting days ahead, some hours ahead — flag whether window-relative spacing is supported. It's a real gap worth naming rather than papering over.
+
+**A test that spans days needs days.** The Agent reads real timestamps, so a "next day" visit sent minutes after the first is a same-day visit to it. In one build, a "next day" visit sent 40 minutes after the first was held by the Agent's own 12-hour rule. Test each moment on its own, or send the later events at their real time.
 
 ## Shadow mode
 
