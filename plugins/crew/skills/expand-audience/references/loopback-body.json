@@ -1,0 +1,7 @@
+{
+  "action": "$event",
+  "decisionId": "$id",
+  "decisionOutput": {
+    "payload": "$row"
+  }
+}
