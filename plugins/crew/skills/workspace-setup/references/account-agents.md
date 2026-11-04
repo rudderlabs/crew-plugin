@@ -1,6 +1,6 @@
 # Account-level Agents
 
-Crew decides per person. Every decision belongs to one `userId` (or `anonymousId` when there is none), and nothing groups people into an account: there is no account record, and a RudderStack `group` call with no `event` is answered `202 ignored` and never processed. An Agent that should decide once per customer account, such as a health score per account or the next onboarding step per new customer, therefore treats the account as the person.
+Crew decides per person. Every decision belongs to one `userId` (or `anonymousId` when there is none). Nothing groups decisions into an account: a workspace with Accounts on groups people into the company they work at (from their email domain, a company trait or, when turned on, `group` calls) and can show an Agent the account's colleagues as context, but a decision is still about one person, and without Accounts there is no account record at all and a `group` call is answered `202 ignored`. An Agent that should decide once per customer account, such as a health score per account or the next onboarding step per new customer, therefore treats the account as the person.
 
 ## Contents
 

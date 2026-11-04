@@ -2,7 +2,6 @@
   "skillId": "<SLUG>",
   "displayName": "<LAUNCH> · Expand Audience",
   "version": 1,
-  "isActive": true,
   "launchMode": "shadow",
   "priority": 100,
   "triggers": [
@@ -35,9 +34,7 @@
   "goal": "For each account that arrives, find <GOAL> there, and hand that person to Crew so outreach can start. This Agent itself sends nothing to the person found or to whoever caused the signal.",
   "agentPrompt": "This decision is about a company, not a person: the account's domain and name are on the event (company_domain, company) and in the company trait. Hold off when the company does not fit, when the domain is a network provider or a free-mail host rather than an employer, or when nothing shows what the company does. Hand off when it fits: the hand-off researches the company and passes on the one best person.",
   "brandVoice": "Plain and factual. Every field this Agent writes is read by our own team, by Crew and by the Outreach Agent as context; none of it is sent to the person found as it stands: no greeting, no prose, no selling. Values are copied from the research result, not composed.",
-  "agentToolNames": [
-    "research_account"
-  ],
+  "agentToolNames": ["research_account"],
   "decisionLogic": {
     "strategy": "policy_constrained_llm_selection",
     "hardConstraints": [],
@@ -98,9 +95,7 @@
           "matched_role",
           "why_this_person"
         ],
-        "requiredOutputFields": [
-          "linkedin_url"
-        ]
+        "requiredOutputFields": ["linkedin_url"]
       }
     }
   ]

@@ -68,6 +68,31 @@ class AccountMode(unittest.TestCase):
         self.assertEqual(identify["messageId"][:-9], track["messageId"][:-6])
 
 
+class ProfileKey(unittest.TestCase):
+    def test_key_profile_uses_the_canonical_profile_url(self):
+        # The loopback mapping keys a found person by the URL Crew normalises to, so a known
+        # contact sent this way is the same person, however the export wrote the URL.
+        leads, _ = m.prepare([{"name": "Jane Doe", "linkedin_url": "http://linkedin.com/in/Jane/"}], 2, keyed="profile")
+        self.assertEqual(leads[0]["user_id"], "https://www.linkedin.com/in/Jane")
+        self.assertEqual(m.lead_ref(leads[0]), "linkedin:jane")
+
+    def test_key_profile_keeps_an_id_column(self):
+        leads, _ = m.prepare([{"name": "Jane Doe", "linkedin_url": "https://www.linkedin.com/in/jane", "id": "crm-7"}], 2, keyed="profile")
+        self.assertEqual(leads[0]["user_id"], "crm-7")
+
+    def test_key_profile_leaves_email_leads_alone(self):
+        leads, _ = m.prepare([{"name": "Jane Doe", "email": "jane@acme.com"}], 2, keyed="profile")
+        self.assertEqual(leads[0]["user_id"], "jane@acme.com")
+
+
+class Window(unittest.TestCase):
+    def test_skip_then_limit(self):
+        leads = list("abcdefg")
+        self.assertEqual(m.window(leads, skip=2, limit=3), ["c", "d", "e"])
+        self.assertEqual(m.window(leads, skip=0, limit=None), leads)
+        self.assertEqual(m.window(leads, skip=20, limit=None), [])
+
+
 class PersonModeUnchanged(unittest.TestCase):
     def test_person_mode_unchanged(self):
         leads, _ = m.prepare([{"name": "A B", "linkedin_url": "https://www.linkedin.com/in/ab"}], 2)

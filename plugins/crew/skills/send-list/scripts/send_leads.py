@@ -79,7 +79,9 @@ EMAIL = re.compile(r"^(?:[A-Za-z0-9_'+\-]+\.)*[A-Za-z0-9_'+\-]*[A-Za-z0-9_+-]@(?
 EVENT = re.compile(r"^[A-Za-z0-9 _:./-]{1,512}$")
 RESERVED = {"name", "linkedin_url", "id"}
 # A company domain as a bare host: a scheme, www. and a path are stripped, the rest must look like
-# a registrable domain. Crew's account research reads it from the identify's company.domain.
+# a hostname with a top-level domain. No public-suffix list (standard library only), so a subdomain
+# is its own account: app.acme.com and acme.com are two rows. Crew's account research reads the
+# value from the identify's company.domain.
 DOMAIN = re.compile(r"^(?:https?://)?(?:www\.)?([a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)*\.[a-z]{2,})(?:[/?#].*)?$")
 # Research cannot resolve a company from a free-mail domain, so an account row naming one is refused
 # before it costs a decision. The same list the website-accounts recipe drops.
@@ -123,9 +125,11 @@ def text(value):
     return value.strip() if isinstance(value, str) else value
 
 
-def prepare(rows, first, entity="person"):
+def prepare(rows, first, entity="person", keyed="slug"):
     """(leads, problems): leads are ready to send, problems are (row number, reason). Each lead
-    carries its kind: linkedin, email, or account."""
+    carries its kind: linkedin, email, or account. keyed="profile" gives a LinkedIn lead without an
+    id the canonical profile URL as its user id, the key a custom mapping mints a found person
+    under, so the same person reached both ways is one person in Crew."""
     if entity == "account":
         return prepare_accounts(rows, first)
     leads, problems, seen = [], [], {}
@@ -159,7 +163,8 @@ def prepare(rows, first, entity="person"):
             problems.append((n, f"same person as row {seen[key]}"))
             continue
         seen[key] = n
-        user_id = str(text(row.get("id") or "") or key)
+        user_id = str(text(row.get("id") or "") or (url if keyed == "profile" and url else key))
+        ref = key if url and user_id == url else user_id
         props = {}
         for key, value in row.items():
             value = text(value)
@@ -178,7 +183,7 @@ def prepare(rows, first, entity="person"):
             # company from company.domain (or company.website) or an email, never from a name alone.
             traits["company"] = {k: v for k, v in (("name", props.get("company")), ("domain", props["company_domain"])) if v}
         row_values = {**{k: v for k, v in (("name", name), ("linkedin_url", url)) if v}, **props}
-        leads.append({"kind": kind, "user_id": user_id, "url": url or None, "email": email.lower() or None,
+        leads.append({"kind": kind, "user_id": user_id, "ref": ref, "url": url or None, "email": email.lower() or None,
                       "traits": traits, "props": props, "row": row_values})
     return leads, problems
 
@@ -219,12 +224,19 @@ def prepare_accounts(rows, first):
     return leads, problems
 
 
+def window(leads, skip, limit):
+    """The leads to send: the first `skip` valid ones left out, then at most `limit`."""
+    leads = leads[skip:]
+    return leads if limit is None else leads[:limit]
+
+
 def lead_ref(lead):
-    """The lead in key material. A LinkedIn lead keeps its readable id. An email-keyed lead's id
-    is an address, and Crew puts the anonymous id in its session key and the message id in its
-    dedup key, so it goes hashed, the way Crew hashes a personal identifier it falls back on."""
+    """The lead in key material. A LinkedIn lead and an account keep their readable ids (a LinkedIn
+    lead keyed by its profile URL keeps linkedin:<slug>). An email-keyed lead's id is an address,
+    and Crew puts the anonymous id in its session key and the message id in its dedup key, so it
+    goes hashed, the way Crew hashes a personal identifier it falls back on."""
     if lead["kind"] in ("linkedin", "account"):
-        return lead["user_id"]
+        return lead.get("ref") or lead["user_id"]
     return hashlib.sha256(lead["user_id"].encode()).hexdigest()[:32]
 
 
@@ -325,7 +337,8 @@ def main():
     parser.add_argument("--identifier", default="linkedin_url",
                         help="the HeyReach channel's recipient identifier, for LinkedIn leads; email rows need none")
     parser.add_argument("--pass", dest="run", default="shadow", help="shadow, live, ...: part of every message id")
-    parser.add_argument("--limit", type=int, help="send only the first N valid leads")
+    parser.add_argument("--skip", type=int, default=0, help="leave out the first N valid leads, e.g. a sample already sent")
+    parser.add_argument("--limit", type=int, help="send only the first N valid leads (after --skip)")
     parser.add_argument("--check", action="store_true", help="validate and show one example, send nothing")
     parser.add_argument("--env", help="the webhook's file in ~/crew-lists/webhooks/: CREW_INGEST_URL, "
                         "or CREW_WEBHOOK_URL and CREW_WEBHOOK_TOKEN")
@@ -333,6 +346,9 @@ def main():
     parser.add_argument("--entity", choices=("person", "account"), default="person",
                         help="person (default): one row per person; account: one row per company, keyed by company_domain")
     parser.add_argument("--only", help="send only the lead whose profile slug, email, domain or id is this")
+    parser.add_argument("--key", dest="keyed", choices=("slug", "profile"), default="slug",
+                        help="slug (default): a LinkedIn lead without an id is keyed linkedin:<slug>; "
+                             "profile: by its canonical profile URL, the key a loopback mapping mints a found person under")
     args = parser.parse_args()
     if not EVENT.match(args.event):
         print(f'--event "{args.event}": Crew takes only letters, digits, spaces and _ : . / - in an event name',
@@ -343,7 +359,7 @@ def main():
     if args.body:
         with open(os.path.expanduser(args.body), encoding="utf-8") as f:
             template = json.load(f)
-    leads, problems = prepare(*load(args.file), entity=args.entity)
+    leads, problems = prepare(*load(args.file), entity=args.entity, keyed=args.keyed)
     for n, reason in problems:
         print(f"row {n}: skipped, {reason}")
     if args.only:
@@ -351,8 +367,7 @@ def main():
         leads = [lead for lead in leads
                  if want in (lead["user_id"].lower(), (lead["url"] or "").rsplit("/", 1)[-1].lower(), lead["email"],
                              lead["props"].get("company_domain") if lead["kind"] == "account" else None)]
-    if args.limit is not None:
-        leads = leads[: args.limit]
+    leads = window(leads, skip=args.skip, limit=args.limit)
     if args.entity == "account":
         print(f"{len(leads)} accounts ready, {len(problems)} skipped")
     else:

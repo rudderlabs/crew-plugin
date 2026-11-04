@@ -36,7 +36,7 @@ Create it with `webhooks_create` (needs `webhooks:write`), with the user's yes, 
 }
 ```
 
-No `externalIds`, so the mapping needs no workspace feature. Crew stores a LinkedIn profile URL under `user_id` as `https://www.linkedin.com/in/<slug>`, so the same person arriving twice is one person. A known contact sent in person mode must carry that same URL as its `id` (the seed recipes say so): the send script's own key for a row without an `id`, `linkedin:<slug>`, is a different person to Crew, and the two would never share an Outreach history.
+No `externalIds`, so the mapping needs no workspace feature. Crew stores a LinkedIn profile URL under `user_id` as `https://www.linkedin.com/in/<slug>`, so the same person arriving twice is one person. A known contact is sent in person mode with `--key profile`, which keys the row by that same canonical URL (the script builds it from however the export wrote the link); the script's default key for such a row, `linkedin:<slug>`, is a different person to Crew, and the two would never share an Outreach history. A row with its own `id` keeps it.
 
 **The token.** `webhooks_create` answers the webhook's URL and bearer token once. Write them to `~/crew-lists/webhooks/<webhookId>.env` as `CREW_WEBHOOK_URL=...` and `CREW_WEBHOOK_TOKEN=...` inside one shell command with `umask 077`, and never echo either. The step 7 replay reads that file.
 
@@ -65,7 +65,7 @@ A track named `<LEAD_EVENT>` whose properties are the whole body Crew posted (`a
 
 ## 6. One Expand decision is one person
 
-An Expand decision hands over one person. To reach a second person at the same account, send that account again a week later under a new `--pass` (the template allows one action per account per week, and the same pass is a duplicate Crew ignores however much time has passed), or raise the limits in `guardrails`. The user can also pick from the Shadow results and send those people in person mode.
+An Expand decision hands over one person. To reach a second person at the same account, send that account again a week later under a new `--pass` (the template allows one action per account per week, and a new pass makes new message ids: Crew remembers a message id for about a day, so a week later the old pass would be a new event anyway, but the new name keeps the two passes apart on the Decisions page), or raise the limits in `guardrails`. The user can also pick from the Shadow results and send those people in person mode.
 
 ## 7. The replay: feeding Outreach from Expand's Shadow decisions
 
@@ -79,4 +79,4 @@ A Shadow Agent posts nothing on any channel, the loopback included. So in Shadow
 python3 -I <send-list>/scripts/send_leads.py --env ~/crew-lists/webhooks/<loopback webhookId>.env --file found.csv --event "<LEAD_EVENT>" --body <this folder>/loopback-body.json --pass shadow
 ```
 
-The Outreach Agent then decides on each person in Shadow. At the Live cutover the same command with `--pass live` gives every found person a new event, which is what a Live Agent acts on, and costs no second research. The message id is built from the event, the pass and the person, so a repeated pass is a duplicate Crew ignores.
+The Outreach Agent then decides on each person in Shadow. At the Live cutover the same command with `--pass live` gives every found person a new event, which is what a Live Agent acts on, and costs no second research. The message id is built from the event, the pass and the person, so a repeat of the same pass within about a day is a duplicate Crew ignores; after that it is a new event.
