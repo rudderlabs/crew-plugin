@@ -1,0 +1,107 @@
+{
+  "skillId": "<SLUG>",
+  "displayName": "<LAUNCH> · Expand Audience",
+  "version": 1,
+  "isActive": true,
+  "launchMode": "shadow",
+  "priority": 100,
+  "triggers": [
+    {
+      "id": "seed",
+      "eventName": "<SEED_EVENT>",
+      "when": {
+        "conditions": [
+          {
+            "property": "company_domain",
+            "operator": "!contains",
+            "value": "<OWN_DOMAIN>"
+          }
+        ]
+      }
+    }
+  ],
+  "successEvent": [],
+  "attributionWindowDays": 30,
+  "inputSchema": {
+    "entityTraits": []
+  },
+  "skills": [
+    {
+      "skillId": "fit",
+      "name": "Account fit",
+      "promptFragment": "Is this company (the company trait, and the event's company_domain and company) a real business that fits: <FIT_RULE>? Judge from what the company does, not from its name alone. These never fit: universities and schools, government bodies, agencies, network providers (internet, hosting, VPN), and one-person sites (a personal site, a freelancer, a sole trader)."
+    }
+  ],
+  "goal": "For each account that arrives, find the one person there who <GOAL>, and hand that person to Crew so outreach can start. Nothing here ever reaches the person found or whoever caused the signal.",
+  "agentPrompt": "This decision is about a company, not a person: the account's domain and name are on the event (company_domain, company) and in the company trait. Hold off when the company does not fit, when the domain is a network provider or a free-mail host rather than an employer, or when nothing shows what the company does. Hand off when it fits: the hand-off researches the company and passes on the one best person.",
+  "brandVoice": "Plain and factual. Every field this Agent writes is read by our own team and by Crew, never by the person found: no greeting, no prose, no selling. Values are copied from the research result, not composed.",
+  "agentToolNames": [
+    "research_account"
+  ],
+  "decisionLogic": {
+    "strategy": "policy_constrained_llm_selection",
+    "hardConstraints": [],
+    "acts": [
+      {
+        "id": "handoff",
+        "name": "Hand a researched lead to Crew"
+      }
+    ],
+    "options": [
+      {
+        "id": "handoff",
+        "name": "Research and hand off",
+        "whenToPrefer": "The company plausibly fits. The hand-off researches the company and passes on the one best person; nobody is contacted here.",
+        "actId": "handoff"
+      }
+    ],
+    "actionPolicies": [
+      {
+        "id": "lead_found",
+        "actId": "handoff",
+        "action": "<LEAD_EVENT>",
+        "channelId": "<LOOPBACK_CHANNEL_ID>"
+      }
+    ],
+    "whenNoClearFit": "hold_off"
+  },
+  "guardrails": {
+    "deduplicationEnabled": true,
+    "deduplicationWindow": "72h",
+    "maxActionsPerEntityPerDay": 1,
+    "maxActionsPerEntityPerWeek": 1
+  },
+  "scheduling": {
+    "triggerDelay": "0s"
+  },
+  "followUp": {
+    "enabled": false,
+    "count": 1,
+    "gapDays": 7
+  },
+  "availableActions": [
+    {
+      "id": "lead_found",
+      "type": "<LEAD_EVENT>",
+      "enabled": true,
+      "channel": "webhook",
+      "payloadTemplate": {
+        "prompt": "Call research_account once, with goal \"<GOAL>\" and targetRoles [\"<ROLE_1>\", \"<ROLE_2>\", \"<ROLE_3>\", \"<ROLE_4>\", \"<ROLE_5>\"]. Pass exactly the user's list and nothing more: the tool refuses more than five roles, so delete the placeholders you do not fill. From the people it returns, choose the ONE whose role and experience best show they <GOAL>, and who has a LinkedIn profile link. Judge by what their role and experience show, not by the title alone. When the seed names a person (a visitor, a known contact), that person is not automatically the one: the best person is often someone else at the company. Fill the fields exactly as the tool returned them. Copy linkedin_url character for character; never build, complete or guess one. name and title are the person's, as returned. company_name and company_domain are the researched company's name and domain from the same result. matched_role is the one role from the list they match. If research returned nobody with a LinkedIn profile link, leave linkedin_url empty and say why in why_this_person: the hand-off is then refused and recorded on this decision, and nobody is minted. why_this_person is one sentence on why this person fits, written for our own team; it never reaches the person.",
+        "requiredInputs": [],
+        "optionalInputs": [],
+        "outputFields": [
+          "linkedin_url",
+          "name",
+          "title",
+          "company_name",
+          "company_domain",
+          "matched_role",
+          "why_this_person"
+        ],
+        "requiredOutputFields": [
+          "linkedin_url"
+        ]
+      }
+    }
+  ]
+}
