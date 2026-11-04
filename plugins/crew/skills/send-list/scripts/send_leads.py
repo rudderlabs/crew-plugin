@@ -17,6 +17,16 @@ account research needs. All identifies go first, then a short pause, then the
 tracks, so each lead's profile URL or email is stored before the Agent decides
 on them.
 
+A list of accounts, one row per company and no person, is sent with
+--entity account. Each row needs a company_domain (a bare domain; a scheme,
+www. or path is stripped) and may carry company, the name; it is keyed
+account:<domain>, its identify carries company {name, domain}, which is what
+Crew's account research resolves the company from, and every other column
+becomes an event property. A row that also names a person (a linkedin_url or
+an email) is refused: send it in person mode. A free-mail domain is refused
+too, since no research can resolve a company from it. This is the mode the
+expand-audience skill's Expand Agent triggers on.
+
 An id column is the person's user id. Set it when the person already exists in
 Crew under another id (a product user id, for example), so the list joins what
 Crew already knows about them. Without it a LinkedIn lead is linkedin:<slug> and
@@ -35,6 +45,7 @@ new events.
   send_leads.py --file leads.csv --event "ABC Launch Lead" --check
   send_leads.py --env ~/crew-lists/webhooks/<id>.env --file leads.csv --event "ABC Launch Lead" --pass shadow
   send_leads.py --env ~/crew-lists/webhooks/<id>.env --body body.json --file leads.csv --event "ABC Lead" --pass shadow
+  send_leads.py --env ~/crew-lists/webhooks/<id>.env --file accounts.csv --event "ABC Account Seeded" --entity account --pass shadow
 
 The destination comes only from --env, except with --check: the webhook's
 KEY=VALUE file, which must sit in ~/crew-lists/webhooks/ and be readable by you
@@ -67,6 +78,13 @@ EMAIL = re.compile(r"^(?:[A-Za-z0-9_'+\-]+\.)*[A-Za-z0-9_'+\-]*[A-Za-z0-9_+-]@(?
 # the script refuses the name before it sends anything.
 EVENT = re.compile(r"^[A-Za-z0-9 _:./-]{1,512}$")
 RESERVED = {"name", "linkedin_url", "id"}
+# A company domain as a bare host: a scheme, www. and a path are stripped, the rest must look like
+# a registrable domain. Crew's account research reads it from the identify's company.domain.
+DOMAIN = re.compile(r"^(?:https?://)?(?:www\.)?([a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)*\.[a-z]{2,})(?:[/?#].*)?$")
+# Research cannot resolve a company from a free-mail domain, so an account row naming one is refused
+# before it costs a decision. The same list the website-accounts recipe drops.
+FREE_MAIL = {"gmail.com", "googlemail.com", "yahoo.com", "hotmail.com", "outlook.com", "icloud.com",
+             "live.com", "aol.com", "proton.me", "protonmail.com", "qq.com", "163.com"}
 WEBHOOKS = "~/crew-lists/webhooks"
 LOCAL = {"localhost", "127.0.0.1", "::1"}
 
@@ -105,8 +123,11 @@ def text(value):
     return value.strip() if isinstance(value, str) else value
 
 
-def prepare(rows, first):
-    """(leads, problems): leads are ready to send, problems are (row number, reason)."""
+def prepare(rows, first, entity="person"):
+    """(leads, problems): leads are ready to send, problems are (row number, reason). Each lead
+    carries its kind: linkedin, email, or account."""
+    if entity == "account":
+        return prepare_accounts(rows, first)
     leads, problems, seen = [], [], {}
     for n, row in enumerate(rows, start=first):
         name = text(row.get("name") or "")
@@ -124,11 +145,13 @@ def prepare(rows, first):
                 continue
             key = f"linkedin:{match.group(1).lower()}"
             url = f"https://www.linkedin.com/in/{match.group(1)}"
+            kind = "linkedin"
         elif email:
             if not EMAIL.match(email):
                 problems.append((n, "email is not an address Customer.io accepts"))
                 continue
             key = email.lower()
+            kind = "email"
         else:
             problems.append((n, "no linkedin_url or email"))
             continue
@@ -155,8 +178,43 @@ def prepare(rows, first):
             # company from company.domain (or company.website) or an email, never from a name alone.
             traits["company"] = {k: v for k, v in (("name", props.get("company")), ("domain", props["company_domain"])) if v}
         row_values = {**{k: v for k, v in (("name", name), ("linkedin_url", url)) if v}, **props}
-        leads.append({"user_id": user_id, "url": url or None, "email": email.lower() or None, "traits": traits,
-                      "props": props, "row": row_values})
+        leads.append({"kind": kind, "user_id": user_id, "url": url or None, "email": email.lower() or None,
+                      "traits": traits, "props": props, "row": row_values})
+    return leads, problems
+
+
+def prepare_accounts(rows, first):
+    """Account mode: one lead per company, keyed account:<domain>, with no person in it."""
+    leads, problems, seen = [], [], {}
+    for n, row in enumerate(rows, start=first):
+        if text(str(row.get("linkedin_url") or "")) or text(str(row.get("email") or "")):
+            problems.append((n, "names a person (linkedin_url or email): send it in person mode, not --entity account"))
+            continue
+        raw = text(str(row.get("company_domain") or "")).lower()
+        match = DOMAIN.match(raw) if raw else None
+        if not match:
+            problems.append((n, "no company_domain, or not a bare domain like acme.com"))
+            continue
+        domain = match.group(1)
+        if domain in FREE_MAIL:
+            problems.append((n, f"{domain} is a free-mail domain, not a company"))
+            continue
+        if domain in seen:
+            problems.append((n, f"same company as row {seen[domain]}"))
+            continue
+        seen[domain] = n
+        key = f"account:{domain}"
+        user_id = str(text(row.get("id") or "") or key)
+        props = {}
+        for column, value in row.items():
+            value = text(value)
+            if column == "id" or value in (None, ""):
+                continue
+            props[column] = value
+        props["company_domain"] = domain
+        company = {k: v for k, v in (("name", props.get("company")), ("domain", domain)) if v}
+        leads.append({"kind": "account", "user_id": user_id, "url": None, "email": None,
+                      "traits": {"company": company}, "props": props, "row": dict(props)})
     return leads, problems
 
 
@@ -164,7 +222,7 @@ def lead_ref(lead):
     """The lead in key material. A LinkedIn lead keeps its readable id. An email-keyed lead's id
     is an address, and Crew puts the anonymous id in its session key and the message id in its
     dedup key, so it goes hashed, the way Crew hashes a personal identifier it falls back on."""
-    if lead["url"]:
+    if lead["kind"] in ("linkedin", "account"):
         return lead["user_id"]
     return hashlib.sha256(lead["user_id"].encode()).hexdigest()[:32]
 
@@ -271,7 +329,9 @@ def main():
     parser.add_argument("--env", help="the webhook's file in ~/crew-lists/webhooks/: CREW_INGEST_URL, "
                         "or CREW_WEBHOOK_URL and CREW_WEBHOOK_TOKEN")
     parser.add_argument("--body", help="JSON template for a custom-format webhook: one event per lead")
-    parser.add_argument("--only", help="send only the lead whose profile slug, email or id is this")
+    parser.add_argument("--entity", choices=("person", "account"), default="person",
+                        help="person (default): one row per person; account: one row per company, keyed by company_domain")
+    parser.add_argument("--only", help="send only the lead whose profile slug, email, domain or id is this")
     args = parser.parse_args()
     if not EVENT.match(args.event):
         print(f'--event "{args.event}": Crew takes only letters, digits, spaces and _ : . / - in an event name',
@@ -282,18 +342,22 @@ def main():
     if args.body:
         with open(os.path.expanduser(args.body), encoding="utf-8") as f:
             template = json.load(f)
-    leads, problems = prepare(*load(args.file))
+    leads, problems = prepare(*load(args.file), entity=args.entity)
     for n, reason in problems:
         print(f"row {n}: skipped, {reason}")
     if args.only:
         want = args.only.lower()
         leads = [lead for lead in leads
-                 if want in (lead["user_id"].lower(), (lead["url"] or "").rsplit("/", 1)[-1].lower(), lead["email"])]
+                 if want in (lead["user_id"].lower(), (lead["url"] or "").rsplit("/", 1)[-1].lower(), lead["email"],
+                             lead["props"].get("company_domain") if lead["kind"] == "account" else None)]
     if args.limit is not None:
         leads = leads[: args.limit]
-    by_email = sum(1 for lead in leads if not lead["url"])
-    print(f"{len(leads)} leads ready ({len(leads) - by_email} by LinkedIn profile, {by_email} by email), "
-          f"{len(problems)} skipped")
+    if args.entity == "account":
+        print(f"{len(leads)} accounts ready, {len(problems)} skipped")
+    else:
+        by_email = sum(1 for lead in leads if not lead["url"])
+        print(f"{len(leads)} leads ready ({len(leads) - by_email} by LinkedIn profile, {by_email} by email), "
+              f"{len(problems)} skipped")
 
     def build(lead):
         if template is not None:
