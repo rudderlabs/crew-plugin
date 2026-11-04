@@ -3,6 +3,6 @@
   "private": true,
   "description": "Pins the Claude Code CLI that CI uses for claude plugin validate. Not part of the plugin.",
   "dependencies": {
-    "@anthropic-ai/claude-code": "2.1.318"
+    "@anthropic-ai/claude-code": "2.1.311"
   }
 }
