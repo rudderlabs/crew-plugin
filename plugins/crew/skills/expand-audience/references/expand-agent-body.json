@@ -29,7 +29,7 @@
     {
       "skillId": "fit",
       "name": "Account fit",
-      "promptFragment": "Is this company (the company trait, and the event's company_domain and company) a real business that fits: <FIT_RULE>? Judge from what the company does, not from its name alone. These never fit: universities and schools, government bodies, agencies, network providers (internet, hosting, VPN), and one-person sites (a personal site, a freelancer, a sole trader)."
+      "promptFragment": "Is this company (the company trait, and the event's company_domain and company) a real business that fits: <FIT_RULE>? Judge from what the company does, not from its name alone. These never fit: universities and schools, government bodies, network providers (internet, hosting, VPN), and one-person sites (a personal site, a freelancer, a sole trader)."
     }
   ],
   "goal": "For each account that arrives, find the one person there who <GOAL>, and hand that person to Crew so outreach can start. Nothing here ever reaches the person found or whoever caused the signal.",
