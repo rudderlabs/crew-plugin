@@ -7,7 +7,7 @@ One row per company the user wants a person at, optionally with the person they 
 | `company_domain`                         | Required. A bare domain (`acme.com`). A scheme, `www.` or a path is stripped by the send script; a free-mail domain is refused.            |
 | `company`                                | The company's name.                                                                                                                        |
 | `segment`, any other column              | Becomes an event property the Expand Agent reads and the Outreach Agent inherits in `why_this_person`'s company. Only what is fine to say. |
-| `name`, `linkedin_url`, `email`, `title` | A person the user already knows at that company. A row with one is a person, not an account.                                               |
+| `name`, `linkedin_url`, `email`, `title` | A person the user already knows at that company. A row with one is a person, not an account; give it an `id` equal to the profile URL, as `people-list.md` says, so the person is one person whichever path reaches them. |
 
 ## Steps
 

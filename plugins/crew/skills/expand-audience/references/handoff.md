@@ -36,7 +36,7 @@ Create it with `webhooks_create` (needs `webhooks:write`), with the user's yes, 
 }
 ```
 
-No `externalIds`, so the mapping needs no workspace feature. Crew stores a LinkedIn profile URL under `user_id` as `https://www.linkedin.com/in/<slug>`, so the same person arriving twice is one person.
+No `externalIds`, so the mapping needs no workspace feature. Crew stores a LinkedIn profile URL under `user_id` as `https://www.linkedin.com/in/<slug>`, so the same person arriving twice is one person. A known contact sent in person mode must carry that same URL as its `id` (the seed recipes say so): the send script's own key for a row without an `id`, `linkedin:<slug>`, is a different person to Crew, and the two would never share an Outreach history.
 
 **The token.** `webhooks_create` answers the webhook's URL and bearer token once. Write them to `~/crew-lists/webhooks/<webhookId>.env` as `CREW_WEBHOOK_URL=...` and `CREW_WEBHOOK_TOKEN=...` inside one shell command with `umask 077`, and never echo either. The step 7 replay reads that file.
 
