@@ -27,7 +27,7 @@ Where a piece is missing, say so in one line and tell them to ask the RudderStac
 
 Read [references/scoping.md](references/scoping.md) and answer each part of what they asked for: yes and how, partly and the caveat, or no and what to do instead. Give definite answers; the table is the product, not a guess. Then collect, in the user's words:
 
-- **The ICP:** what the person they want does (the goal, one sentence), up to five job titles, the rule for which companies fit, and the user's own domains. The fit rule says whether agencies and consultancies count: the template's fixed exclusions are only schools, government bodies, network providers and one-person sites, because in a test run a fixed "agencies" exclusion would have held the very consulting firms the user was after.
+- **The ICP:** who they want at each account, as a noun phrase that completes "find … there" (the goal, `<GOAL>`: "the person who runs partnerships with data vendors"), up to five job titles (`<ROLES>`, written into the template as the titles separated by commas, no quotes), the rule for which companies fit, and the user's own domains. The fit rule says whether agencies and consultancies count: the template's fixed exclusions are only schools, government bodies, network providers and one-person sites, because in a test run a fixed "agencies" exclusion would have held the very consulting firms the user was after.
 - **The launch:** one sentence on the offer and the facts a message may state (`linkedin-outreach` → Collect the inputs).
 - **The outcome:** the event that says it happened, if the workspace has one.
 - **The seed:** which of the three under `references/seeds/` they have.
