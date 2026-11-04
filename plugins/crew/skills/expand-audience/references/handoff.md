@@ -6,7 +6,7 @@ Expand decides about a company. Outreach decides about a person. The step betwee
 
 ## 1. The loopback webhook
 
-Create it with `webhooks_create` (needs `webhooks:write`), reusing one named `Crew loopback` from `webhooks_list` if it exists. Read `<PROFILE_IDENTIFIER>` from the HeyReach channel's `settings.profile_url_identifier` in `channels_list` (usually `linkedin_url`): HeyReach sends to the identifier named there, so a mapping that names another one sends to nobody.
+Create it with `webhooks_create` (needs `webhooks:write`), with the user's yes, since a webhook cannot be removed over MCP. Before that, look for one named `Crew loopback` in `webhooks_list` and compare its mapping to the one below: reuse it only when the paths match, because a loopback with another mapping mints nobody, or the wrong person, and nothing says so. Read `<PROFILE_IDENTIFIER>` from the HeyReach channel's `settings.profile_url_identifier` in `channels_list` (usually `linkedin_url`): HeyReach sends to the identifier named there, so a mapping that names another one sends to nobody.
 
 ```json
 {
@@ -61,7 +61,7 @@ A track named `<LEAD_EVENT>` whose properties are the whole body Crew posted (`a
 
 ## 5. Why nobody phantom is minted
 
-`linkedin_url` is in the action's `requiredOutputFields`. When research found nobody with a profile link, the model leaves the field empty, the webhook dispatcher refuses the post, and the decision is recorded on Expand as a refusal: visible on the Decisions page and countable, with the reason in `why_this_person`. Nothing reaches the loopback, so no person keyed by a decision id appears in `users_list`. In an early version without the required field, such decisions landed as people with no profile and sat in the Outreach Agent's trigger forever.
+`linkedin_url` is in the action's `requiredOutputFields`. A blank field is refused: when research found nobody with a profile link, the model leaves it empty, the webhook dispatcher refuses the post, and the decision is recorded on Expand as a refusal, visible on the Decisions page and countable, with the reason in `why_this_person`. Nothing reaches the loopback. In an early version without the required field, such decisions landed as people with no profile and sat in the Outreach Agent's trigger forever. The check is for emptiness, not shape: a wrong value (a company page, a word such as `n/a`) would post, and the mapping would then key the person by the decision id or by that string. That is a built or guessed URL, which the dry run and the Shadow review look for, and which the Live hand-over re-checks before Expand goes Live.
 
 ## 6. One Expand decision is one person
 
