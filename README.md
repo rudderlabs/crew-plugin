@@ -142,6 +142,14 @@ plugins/crew/evals/               eval cases, run with: claude plugin eval plugi
 
 Adding or changing a skill: [plugins/crew/README.md → Adding a skill](plugins/crew/README.md#adding-a-skill).
 
+## Tests
+
+CI runs on every pull request and every push to `main`. It runs the send-list script's tests and `claude plugin validate plugins/crew`, and needs no Crew or Anthropic sign-in; the Claude Code version it uses is pinned in [`.github/ci/package.json`](.github/ci/package.json). To run the tests from your clone:
+
+```bash
+python3 -I plugins/crew/skills/send-list/scripts/test_send_leads.py -v
+```
+
 ## License
 
 [MIT](LICENSE)
