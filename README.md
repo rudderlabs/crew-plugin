@@ -8,6 +8,7 @@
 | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
 | [`workspace-setup`](plugins/crew/skills/workspace-setup/SKILL.md)         | "Build an Agent that welcomes new signups, dry-run it, then take it to Shadow" |
 | [`connect-rudderstack`](plugins/crew/skills/connect-rudderstack/SKILL.md) | "Send our RudderStack events to Crew"                                          |
+| [`connect-warehouse`](plugins/crew/skills/connect-warehouse/SKILL.md)     | "Each row of our Snowflake accounts table should trigger an Agent every week"  |
 | [`lead-scoring`](plugins/crew/skills/lead-scoring/SKILL.md)               | "Score our inbound leads and send the hot ones to sales"                       |
 | [`send-list`](plugins/crew/skills/send-list/SKILL.md)                     | "Send this list of trial users to our onboarding Agent"                        |
 | [`calibrate`](plugins/crew/skills/calibrate/SKILL.md)                     | "Review this Agent's last decisions with me"                                   |
@@ -69,7 +70,7 @@ Installing plugin "crew@rudder-crew"...
 
 $ claude plugin list
   ❯ crew@rudder-crew
-    Version: 0.6.4
+    Version: 0.8.0
     Scope: user
     Status: ✔ enabled
 ```

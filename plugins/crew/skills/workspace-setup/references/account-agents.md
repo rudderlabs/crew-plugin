@@ -14,11 +14,11 @@ Crew decides per person. Every decision belongs to one `userId` (or `anonymousId
 
 ## Start with a dry run
 
-The account snapshot event does not exist until a sync sends it, and the session should not wait for one. Write five account snapshots by hand (a healthy account, a falling one, one near renewal, one new and stalled, one with thin data), dry-run the Agent on them in one `preview_tryEvent` call, and agree the tiers with the user. Build the sync after that, with the same property names the dry run used.
+The account snapshot event does not exist until a sync sends it, and the session should not wait for one. Write five account snapshots by hand (a healthy account, a falling one, one near renewal, one new and stalled, one with thin data), dry-run the Agent on them in one `preview_tryEvent` call, and agree the tiers with the user. Build the sync after that, with the same property names the dry run used (the `connect-warehouse` skill).
 
 ## Send one event per account
 
-- **One track event per account per run**, with `userId` set to the account id and the account's facts as properties: plan, seats, active users this week and last, open support tickets, days to renewal, the onboarding milestones reached and when. A scheduled RudderStack Reverse ETL sync from a warehouse table, or from a RudderStack Profiles table, sends one row per account on a schedule: the `send-list` skill's `references/recurring-sync.md` sets it up. Give the event one fixed name, such as `Account Health Snapshot`.
+- **One track event per account per run**, with `userId` set to the account id and the account's facts as properties: plan, seats, active users this week and last, open support tickets, days to renewal, the onboarding milestones reached and when. A scheduled RudderStack Reverse ETL sync from a warehouse table, or from a RudderStack Profiles table, sends one row per account on a schedule: the `connect-warehouse` skill sets it up. Give the event one fixed name, such as `Account Health Snapshot`. For a tier on every account every run, the sync's mode is Full: Upsert sends only the accounts whose numbers changed, so an unchanged account would keep last week's tier.
 - **Prefix the id**, for example `account:<id>`. The id keys the account's event window, its suppression counts and its page under Users, so it must never equal a real person's `userId`.
 - **Numbers as numbers, dates as properties.** Send `active_users_7d: 14`, not `"14 users"`. A date goes in a property (`renewal_date: "2027-03-01"`), never onto the event's own timestamp; a timestamp with no time zone is refused with a 400 that a RudderStack Webhook destination does not retry.
 - **Roll person events up in the warehouse.** Milestone events from a product's event stream carry a person's id, and Crew cannot join them to an account. Count them per account in the warehouse table the sync reads (`milestones_reached`, `first_data_at`), so the snapshot carries the account's progress.
@@ -72,6 +72,8 @@ Suppression counts this Agent's own delivered decisions for the same `userId`, r
 | `maxActionsPerEntityPerWeek` | `3`     | Caps a daily tier at three days a week                                                                             |
 
 For a tier that should be refreshed every day, set the dedup window under the sync interval (`20h` for a daily sync), the daily cap to `2` so clock drift cannot suppress a run, and the weekly cap to `7` or more. A suppressed decision is recorded with its reason, so check the first week of decisions for `deduplicated` or `rate_limited` before trusting the receiver's table.
+
+Turn follow-ups off (`followUp: {"enabled": false, "count": 1, "gapDays": 1}`): the next snapshot is the next decision. A body with no `followUp` block is stored with follow-ups on (three, a day apart); in a test account Agent written that way, each snapshot decision would have scheduled three more decisions on the same account before the next sync arrived.
 
 ## When the people matter too
 

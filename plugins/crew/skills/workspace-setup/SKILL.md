@@ -47,7 +47,8 @@ If any Agent is Live, list its trigger events first, `identify`, `page` and `scr
 | A webhook whose `rudderstack.sourceKind` is `connected`                | The Crew team already forwards the customer's sources: add no destination. If its `wiringStatus` is not `ready`, tell the Crew contact and carry on       |
 | Events with a recent `lastSeen`                                        | Events already arrive: take the names from them in step 2, and in step 5 run only `connect-rudderstack`'s checks                                          |
 | A webhook with no events under it                                      | Ask whether the user still has its token (`~/crew-lists/webhooks/<webhookId>.env`). If not, create a new one, and the user revokes the old one in the app |
-| A per-account ask (account health, onboarding per new customer)        | `references/account-agents.md`; the first dry run needs no events                                                                                         |
+| A per-account ask (account health, onboarding per new customer)        | `references/account-agents.md`; the first dry run needs no events, and the rows reach the Agent through `connect-warehouse`                               |
+| The Agent's facts already sit in a warehouse table (scores, rollups)   | Build and dry-run the Agent here, then feed it with the `connect-warehouse` skill                                                                         |
 | Nothing                                                                | Step 2                                                                                                                                                    |
 
 ### 2. Find the event names
@@ -66,7 +67,7 @@ Read `fired` first, then every draft as its recipient would. Fix the body in a w
 
 ### 5. Connect the real event stream, while the user reads drafts
 
-A customer with RudderStack sends their real event stream now: the `connect-rudderstack` skill. The stream keeps flowing after the move to Shadow, and Calibrate can replay it while the Agent is still Off. Skip this step when events already arrive. That skill's one test identify and track only prove the webhook token works, on an event name no Agent triggers on, so they can go while the Agent is Off. A customer without RudderStack gets test events meant to produce decisions from Claude Code instead, in step 8, once the Agent is in Shadow.
+A customer with RudderStack sends their real event stream now: the `connect-rudderstack` skill. The stream keeps flowing after the move to Shadow, and Calibrate can replay it while the Agent is still Off. Skip this step when events already arrive. That skill's one test identify and track only prove the webhook token works, on an event name no Agent triggers on, so they can go while the Agent is Off. A customer without RudderStack gets test events meant to produce decisions from Claude Code instead, in step 8, once the Agent is in Shadow. Rows from a warehouse table come through a scheduled Reverse ETL sync instead: the `connect-warehouse` skill.
 
 ### 6. Calibrate, once real trigger events have arrived
 

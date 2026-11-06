@@ -1,6 +1,6 @@
 ---
 name: send-list
-description: Build a list of people for any use case (a Lookout audience, a warehouse or Snowflake table, Clay, a CSV, a CRM), review it with the user, and send the approved people to a Crew Agent, which decides and writes the outreach. People can be known by email or by LinkedIn profile. Use when someone wants to choose who a Crew Agent works on, for example "send this Lookout audience to Crew", "reverse ETL these Snowflake users into Crew", "top accounts that visited our site but Crew is not working on", "data leaders at these companies", or "this list from my CRM".
+description: Build a list of people for any use case (a Lookout audience, a warehouse query, Clay, a CSV, a CRM), review it with the user, and send the approved people once to a Crew Agent, which decides and writes the outreach. People can be known by email or by LinkedIn profile. Use when someone wants to choose who a Crew Agent works on, once, for example "send this Lookout audience to Crew", "top accounts that visited our site but Crew is not working on", "data leaders at these companies", or "this list from my CRM". A warehouse table or query that should keep reaching an Agent on a schedule, or a list of more than a few hundred people, belongs to the connect-warehouse skill instead.
 compatibility: Needs the Crew MCP (an "Agent setup" token, or a role with webhooks:write), Python 3, a machine that can reach the Crew webhook (Claude Code or Cowork), and the MCPs the list comes from (Lookout, a warehouse, Clay, ...). Self-contained, except that building a new Agent uses the `workspace-setup` skill.
 ---
 
@@ -34,7 +34,7 @@ Ask which people the user wants and how to rank them. If a recipe in [references
 
 If no recipe fits, build the list with the MCPs that are connected. To find people at companies, use [references/clay-people.md](references/clay-people.md). Write the list to `list.csv`.
 
-**This skill sends a list once, through Claude.** Every row passes through the chat, so keep a list to a few hundred people. A bigger list, or one that should keep sending the people who join it later, belongs in a RudderStack Reverse ETL sync: [references/recurring-sync.md](references/recurring-sync.md). It builds on steps 4 and 5 of this skill.
+**This skill sends a list once, through Claude.** Every row passes through the chat, so keep a list to a few hundred people. A bigger list, or one that should keep sending the people who join it later, belongs in a scheduled RudderStack Reverse ETL sync: the `connect-warehouse` skill. A list built here from a warehouse query becomes that sync's model.
 
 **Save each stage, then show the funnel.** Write each stage's result to its own file in the list folder, together with the setting it used (for example, `accounts.csv` for "3 or more days"). After the list is built, show one line with the count after each stage, such as `258 accounts → 72 not customers → top 5 → 10 found in Clay → 9 people`. If the user changes one setting ("5 days, not 3", "1 per account"), run again from that stage only, and use the saved files for the stages before it.
 

@@ -77,9 +77,9 @@ When the user needs one, say which and that their Crew contact turns it on; don'
 
 RudderStack's public MCP server (`https://mcp.rudderstack.com/mcp`, OAuth). It comes with RudderStack's `rudder-core` plugin (`/plugin marketplace add rudderlabs/rudder-agent-skills`, then `/plugin install rudder-core@rudder-agent-skills`), which signs in on first use; install it only that way, so there is one RudderStack server. It is the recon surface (`recon.md`) and the check that events leave RudderStack:
 
-- **Reads:** sources, destinations and connections; each source's event names, schemas and properties; live events; per-destination event metrics and errors.
+- **Reads:** sources (Reverse ETL sources too, with `list_sources` and `retl_type`), destinations and connections; each source's event names, schemas and properties; live events; per-destination event metrics and errors; Reverse ETL sync runs (`get_retl_source_syncs`) and the rows a run's destination refused (`get_retl_failed_records`).
 - **Writes:** transformations: create or update one (`upsert_transformation`), test it on sample events before saving (`transformation_test_new`), and connect it to a destination.
-- **Cannot:** create a destination or connect one to a source. Adding Crew's Webhook destination is the RudderStack app, Terraform or rudder-cli: the `connect-rudderstack` skill.
+- **Cannot:** create a source or a destination, connect one to the other, or start a Reverse ETL sync. Adding Crew's Webhook destination is the RudderStack app, Terraform or rudder-cli: the `connect-rudderstack` skill for event streams, the `connect-warehouse` skill for warehouse tables.
 
 RudderStack also publishes agent skills for its own tools (the `rudderlabs/rudder-agent-skills` Claude Code marketplace: the MCP, Terraform, rudder-cli, tracking plans, Profiles). Use them for RudderStack mechanics; the skills here say what Crew needs.
 
