@@ -67,10 +67,10 @@ Note on `agentPrompt`: its schema comment says it reaches Act content generation
 
 An action is split across two arrays, joined by `id`:
 
-|            | `decisionLogic.actionPolicies[]`                                           | `availableActions[]`                                                                |
-| ---------- | -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| Holds      | routing: which act owns it, which channel, Decide's per-action eligibility | content: who it's from, what to write, which fields                                 |
-| Key fields | `id`, `actId`, `action` (display name), `channelId` or `channelType`       | `id` (same as the policy's), `type` (same as `action`), `sender`, `payloadTemplate` |
+|            | `decisionLogic.actionPolicies[]`                                                                                                    | `availableActions[]`                                                                |
+| ---------- | ----------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| Holds      | routing: which act owns it and which channel; `eligibility` is a description for people, and channel rules go in `priorityGuidance` | content: who it's from, what to write, which fields                                 |
+| Key fields | `id`, `actId`, `action` (display name), `channelId` or `channelType`                                                                | `id` (same as the policy's), `type` (same as `action`), `sender`, `payloadTemplate` |
 
 **The message instructions are `availableActions[].payloadTemplate.prompt`** (1–10,000 characters). This is the "Message instructions" box in the UI editor. Its siblings:
 
@@ -93,7 +93,9 @@ The body mirrors the state as `launchMode` (`shadow` | `live`) and `isActive`. P
 
 **Drafts.** Editing a published agent goes through a server draft: `draft_createForSkill { skillId, version, body, expectedPublishedVersion }`, then `draft_save { draftId, body, expectedRevision }`. Keep the returned `draftId`. Nothing written to a draft reaches production until it is published: with `draft_publish` where the server has it, otherwise by a person in the UI ("Publish vN+1" on `/agents/<skillId>@<version>`).
 
-**Publishing over MCP.** `draft_publish` publishes a draft for an agent that isn't Live. An older server may not have it, so check `tools/list` on the server you are using. Where it is missing, there is one other MCP-only way to ship a body: `agent_create` stores the body it is given as the published version 1, and the agent lands Off. So a new body can go out as a fresh agent: create it, read it back, run `check_body.py`, move it to Shadow with `agent_update`, and turn the agent it replaces Off. Two things to know:
+**The working copy may be the user's.** A published Agent has one working copy, the one the app's editor shows, and `draft_save` replaces it whole; `draft_getForSkill` shows whether one exists. If the user is editing the Agent in the app, don't save to it: copy the Agent into a separate working copy with `draft_createFromSkill`, dry-run that copy by its `draftId`, and give the user the changed fields to paste. Never `draft_publish` the copy, which would make it a new Agent; `draft_discard` it when done.
+
+**Publishing over MCP.** `draft_publish` publishes a draft for an agent that isn't Live. After a publish, read the Agent back with `agent_get` and check that `body.version` went up before telling the user it is published: a refused call can look like a finished one. An older server may not have it, so check `tools/list` on the server you are using. Where it is missing, there is one other MCP-only way to ship a body: `agent_create` stores the body it is given as the published version 1, and the agent lands Off. So a new body can go out as a fresh agent: create it, read it back, run `check_body.py`, move it to Shadow with `agent_update`, and turn the agent it replaces Off. Two things to know:
 
 - **Action ids another agent already uses are re-minted.** In one workspace, `<brand>_welcome_email` came back as `welcome_email_<brand>s`. Both halves (the policy and its `availableActions[]` entry) get the same new id, so nothing is orphaned, but anything that scripts against the old id breaks. Read the ids from the read-back.
 - **It is a new agent, not a new version.** It starts with no decisions, no history and its own Decisions filter. For a change to an agent already running, publish its draft instead.

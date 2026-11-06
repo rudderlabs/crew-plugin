@@ -14,10 +14,13 @@ then writes nothing, or writes from instructions nobody can see in the editor:
   - follow-up gap longer than the attribution window; a Live body naming a
     channelType instead of a channelId
 
-It also warns about two things that pass every check and still go wrong:
+It also warns about things that pass every check and still go wrong:
 
   - bound agentToolNames: Shadow and dry runs refuse any tool that doesn't
     classify as a read, and nothing on the Agent page shows it
+  - heading or list lines in a signal's promptFragment, an option's
+    whenToPrefer or a hard constraint's condition: Decide reads each flattened
+    to one line, so the structure runs into the text around it
   - on a channel without fields of its own, or a webhook whose only field is
     message, instructions asking for "plain text" while a field the writer
     treats as HTML (any name but subject, subject_line, preheader, preview_text)
@@ -49,6 +52,8 @@ THIN_INSTRUCTIONS = 150  # characters; below this the writer falls back to its d
 TEXT_FIELD_KEYS = {"subject", "subject_line", "preheader", "preview_text"}
 STATIC_FIELD_CHANNELS = {None, "webhook"}  # plain-text and templated channels set each field's format themselves
 HTML_TAGS = re.compile(r"<(p|br|ul|ol|li|strong|em|a)\b", re.IGNORECASE)
+# A Markdown heading, bullet or numbered line. "**bold**" doesn't match: bold survives flattening.
+STRUCTURE_LINE = re.compile(r"^[ \t]*(#{1,6}[ \t]|[-*+][ \t]|\d{1,3}[.)][ \t])", re.MULTILINE)
 
 
 def unwrap(doc):
@@ -90,6 +95,15 @@ def fixed_clevertap_campaign(action):
         return False
     keys = action.get("cleverTapKeys") or []
     return not any((k.get("source") or {}).get("kind") == "authored" for k in keys)
+
+
+def structure_line(text):
+    """The first heading or list line in a field Decide reads on one line, else None."""
+    match = STRUCTURE_LINE.search(text) if isinstance(text, str) else None
+    if match is None:
+        return None
+    line = text[match.start():].split("\n", 1)[0].strip()
+    return line if len(line) <= 40 else line[:40] + "…"
 
 
 def check(body):
@@ -218,6 +232,20 @@ def check(body):
     for aid in act_ids:
         if aid in linked_act_ids and aid not in owner_act_ids:
             errors.append(f"act '{aid}' owns no action but an option links to it; the body is refused.")
+
+    # Decide reads these three on one line each, so a heading or a list in them is lost.
+    one_line_fields = [(f"signal '{s.get('name') or s.get('skillId')}'", "promptFragment", s.get("promptFragment"))
+                       for s in body.get("skills") or []]
+    one_line_fields += [(f"option '{o.get('name') or o.get('id')}'", "whenToPrefer", o.get("whenToPrefer"))
+                        for o in dl.get("options") or []]
+    one_line_fields += [(f"hard constraint {i + 1}", "condition", c.get("condition"))
+                        for i, c in enumerate(dl.get("hardConstraints") or []) if isinstance(c, dict)]
+    for label, field, text in one_line_fields:
+        line = structure_line(text)
+        if line:
+            warnings.append(f"{label}: {field} has a heading or list line ({line!r}). Decide reads it flattened "
+                            "to one line, so the structure runs into the text around it. Write sentences, bold at "
+                            "most. See oda-design.md, 'Write readings a person would say'.")
 
     fu = body.get("followUp") or {}
     window = body.get("attributionWindowDays")

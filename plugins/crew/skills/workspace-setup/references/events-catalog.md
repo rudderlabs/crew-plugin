@@ -79,6 +79,8 @@ There is no ingest tool on the Crew MCP, but `webhooks_create` returns the webho
 
 **Sending the same file again is ignored.** Crew deduplicates on the workspace and the `messageId`, even for events no Agent matched, and the script builds each `messageId` from `--run`, the call's place in the file and its content. To send the same people again (for example ones first sent while the Agent was Off), pass a new `--run`; the script exits 1 when every call came back a duplicate.
 
+**A person keeps their history.** Every decision reads the person's earlier decisions, Shadow ones included, and so does a dry run on an existing person. Test people sent again after a change arrive with those decisions behind them, so a rule about how often to message someone can hold them: in one build, the same test people sent again after each fix were held by the Agent's own frequency rule. To test a change, use new test people (new `userId`s and emails), not only a new `--run`.
+
 ## Events Crew refuses
 
 A RudderStack-format webhook answers these with a 400 and keeps nothing. A RudderStack Webhook destination drops a 400 or 401 without retrying (it retries 429 and 5xx), so from a live pipeline the event is simply lost:
