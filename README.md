@@ -144,7 +144,7 @@ Adding or changing a skill: [plugins/crew/README.md → Adding a skill](plugins/
 
 ## Tests
 
-CI runs on every pull request and every push to `main`. It runs the send-list script's tests and `claude plugin validate plugins/crew`, and needs no Crew or Anthropic sign-in; the Claude Code version it uses is pinned in [`.github/ci/package.json`](.github/ci/package.json). To run the tests from your clone:
+CI runs on every pull request and every push to `main`. It runs the send-list script's tests and `claude plugin validate plugins/crew`, and needs no Crew or Anthropic sign-in; the Claude Code version it uses is pinned in [`.github/ci/package.json`](.github/ci/package.json). `claude plugin validate` checks the plugin's manifest: it fails on a malformed `plugin.json` or one with no `name`. It does not read skill content, check that a hook's script exists, or check the marketplace's plugin source, so it still passes with an empty `SKILL.md`. To run the tests from your clone:
 
 ```bash
 python3 -I plugins/crew/skills/send-list/scripts/test_send_leads.py -v

@@ -1,0 +1,33 @@
+version: 2
+
+updates:
+  # The actions pinned by commit in .github/workflows/.
+  - package-ecosystem: 'github-actions'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+    open-pull-requests-limit: 10
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: 'ci'
+    groups:
+      github-actions-minor-patch:
+        applies-to: version-updates
+        patterns:
+          - '*'
+        update-types:
+          - 'minor'
+          - 'patch'
+
+  # The Claude Code version CI validates the plugin with, pinned in
+  # .github/ci/package.json and its lockfile.
+  - package-ecosystem: 'npm'
+    directory: '/.github/ci'
+    schedule:
+      interval: 'weekly'
+    open-pull-requests-limit: 10
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: 'ci'
