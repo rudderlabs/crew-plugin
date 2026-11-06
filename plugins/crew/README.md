@@ -51,6 +51,6 @@ One PR under `plugins/crew/skills/<name>/`. Before it merges:
 6. **Scripts are Python 3 standard library**, run by absolute path, and exit non-zero on a problem.
 7. **Every rule names its evidence**: the run that showed it, described generically ("in an onboarding-email Agent, the first dry run…"). Customers read every file here, so no customer or prospect names, workspace names, internal paths, PR numbers or dates.
 8. **Evals** under `evals/` for new skills: `claude plugin eval plugins/crew` runs each case with and without the plugin.
-9. **`claude plugin validate plugins/crew` passes**, and the PR bumps `version` in `.claude-plugin/plugin.json`.
+9. **`claude plugin validate plugins/crew` passes**, and the PR bumps `version` in `.claude-plugin/plugin.json`. Validate checks the manifest only: it passes an empty `SKILL.md` and a hook whose script is missing, so it does not stand in for items 1 to 8.
 
 Internal tooling that customers should never see (demo prep, for example) stays a plain skill outside this plugin.
