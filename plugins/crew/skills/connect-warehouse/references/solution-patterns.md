@@ -100,6 +100,8 @@ WHERE u.trial_ends_at > CURRENT_DATE AND l.limit_pct_used >= 80
   - **A launch cutoff kept in the model for good:** `AND entered_at >= '<launch date>'`, the date as a fixed literal that is never removed, so members from before launch never enter. Removing it later sends all of them at once. It needs a column that says when each member qualified.
   - **A baseline sync with the Agent Off:** run `SKILL.md` step 7's one-row test in Shadow, move the Agent Off, put the full query back and sync once: every current member arrives, and an Off Agent decides on none of them, then or later. Move the Agent back to Shadow only after `get_retl_source_syncs` shows the baseline run succeeded with no failed rows; while it has failed rows, keep the Agent Off and sync again. From then on only new members are sent. A new connection's first sync sends everyone again; what a partly failed baseline run resends was not checked in a test run, so keep the Agent Off until a run is clean.
 
+  Members who enter while the Agent is in Shadow get no Live decision unless they are sent again after a person takes it Live: `SKILL.md` step 8, "When a person takes the Agent Live".
+
   Also: Upsert never reports a row that left the set, so the Agent never learns someone stopped qualifying. Not checked in a test run: whether a row that leaves and later returns is sent again.
 
 ## Pattern 4: Warehouse facts as context, not a trigger

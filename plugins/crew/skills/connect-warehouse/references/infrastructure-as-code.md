@@ -105,7 +105,7 @@ What the provider does that the app does not show:
 - **`headers` is marked sensitive**, so the plan hides it, but the state file holds it in plain text. Keep state in the team's protected remote backend.
 - **`schedule.every_minutes` is at least 5.** There is no time-zone field; a cron schedule runs in UTC.
 - **`cursor_column`** (Upsert only) reads just the rows whose cursor value is newer than the last run's. It suits a table that only grows; a row whose other columns change without moving the cursor is not sent again.
-- A table instead of a model: `rudderstack_retl_source_table`, with `schema` and `table` in `config` in place of `sql`.
+- **A model, not a table source.** The provider also has `rudderstack_retl_source_table`, but a table source has no SQL to narrow to one row for SKILL.md step 7's first sync. Over an existing table, write the model as `SELECT ... FROM <schema>.<table>`.
 - **Traits instead of a trigger** (`solution-patterns.md` → pattern 4): `event { type = "identify" }` with no `name`, and each mapping's `to` set to `traits.<name>` (for example `to = "traits.plan"`), as in the provider's own identify examples. The identifier is the person's `user_id`.
 
 ## rudder-cli
