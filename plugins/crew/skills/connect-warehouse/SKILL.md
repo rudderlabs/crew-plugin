@@ -75,6 +75,7 @@ The SQL RudderStack runs on every sync. Write it, show it to the user, and run i
 - **One row per person or account**, with a unique, stable primary key: the id.
 - **Ids as text.** `CAST(account_id AS VARCHAR)` (Snowflake, Redshift, Postgres) or `CAST(account_id AS STRING)` (BigQuery, Databricks). RudderCrew refuses a number user id with a 400.
 - **Numbers as numbers**, so a signal can compare them: `active_users_7d`, not `'14 users'`.
+- **Property names in lower case.** RudderStack names each property after the column as the warehouse returns it, and Snowflake returns an unquoted name in upper case, so `AS active_users_7d` arrives as `properties.ACTIVE_USERS_7D`. Quote the alias: `AS "active_users_7d"`.
 - **Dates as text properties**, such as `TO_VARCHAR(renewal_date, 'YYYY-MM-DD')`. Never map a timestamp onto the event's own timestamp: one with no time zone is refused with a 400.
 - **Only the columns that should prompt a new decision.** Under Upsert, a change in any mapped column sends the row again, and the Agent decides again. Leave out `updated_at`, `last_seen_at` and anything else that changes on every rebuild.
 - **An email, for an Agent that emails a person**: an `email` column, mapped to `properties.email` (step 6).
@@ -84,15 +85,15 @@ An account snapshot, in Snowflake:
 
 ```sql
 SELECT
-  'account:' || CAST(a.account_id AS VARCHAR) AS account_id,
-  a.account_name,
-  a.plan,
-  a.seats,
-  u.active_users_7d,
-  u.active_users_prev_7d,
-  t.open_tickets,
-  DATEDIFF('day', CURRENT_DATE, a.renewal_date) AS days_to_renewal,
-  TO_VARCHAR(a.renewal_date, 'YYYY-MM-DD') AS renewal_date
+  'account:' || CAST(a.account_id AS VARCHAR) AS "account_id",
+  a.account_name AS "account_name",
+  a.plan AS "plan",
+  a.seats AS "seats",
+  u.active_users_7d AS "active_users_7d",
+  u.active_users_prev_7d AS "active_users_prev_7d",
+  t.open_tickets AS "open_tickets",
+  DATEDIFF('day', CURRENT_DATE, a.renewal_date) AS "days_to_renewal",
+  TO_VARCHAR(a.renewal_date, 'YYYY-MM-DD') AS "renewal_date"
 FROM analytics.accounts a
 LEFT JOIN analytics.account_usage_weekly u ON u.account_id = a.account_id
 LEFT JOIN analytics.account_tickets t ON t.account_id = a.account_id
@@ -115,13 +116,14 @@ The first sync sends every row, whatever the mode. Upsert with a column that cha
 
 The connection's other settings:
 
-| Setting         | Value                                                                                    |
-| --------------- | ---------------------------------------------------------------------------------------- |
-| Event type      | Track                                                                                    |
-| Event name      | The Agent's trigger, fixed (not from a column)                                           |
-| User identifier | `user_id`, from the id column                                                            |
-| Mappings        | Each column the Agent reads → `properties.<name>`; the email column → `properties.email` |
-| Schedule        | Manual until step 7 passes                                                               |
+| Setting         | Value                                                                                                                    |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| Event type      | Track (the app starts at identify)                                                                                       |
+| Event name      | The Agent's trigger, fixed (not from a column)                                                                           |
+| User identifier | `user_id`, from the id column                                                                                            |
+| Mappings        | Each column the Agent reads → `properties.<name>`; the email column → `properties.email`                                 |
+| Schedule        | Manual until step 7 passes                                                                                               |
+| Failed records  | **Retain and show failures** on, so `get_retl_failed_records` can read the rows RudderCrew refuses; it is off by default |
 
 RudderStack does not let you change the sync mode, the event type or the user identifier of a saved connection; Terraform and rudder-cli replace or refuse it. To change one, make a new connection. Its first sync sends every row again, and the Agent decides on every one of them again.
 
@@ -137,9 +139,11 @@ The values, whichever tool adds them:
 
 Pick the path by what the customer already uses:
 
-- **The RudderStack app** (the default). The user adds the source, the destination and the connection with the values above. Give them the URL in chat and point them to the saved file for the token.
+- **The RudderStack app** (the default), in this order: the Webhook destination with no source connected (its name takes letters, digits and spaces, not a colon); then the Reverse ETL source, where **Run Query** previews the rows and fills the primary-key list; then, from the source's page, **Use existing destination** and the connection's settings. Give the user the URL in chat and point them to the saved file for the token.
 - **Terraform**, if they manage RudderStack with it. `references/infrastructure-as-code.md` has the resources. The header value comes from a sensitive variable set from the environment, never a literal in a `.tf` or `.tfvars` file, and Terraform keeps it in plain text in its state, so use the team's protected remote state. Show the user `terraform plan`; stop if it changes or destroys anything but the new source, destination and connection; the user runs `apply`, or says yes to it.
 - **rudder-cli**, only if a rudder-cli project already manages this workspace. `references/infrastructure-as-code.md` has the specs. `validate`, show the user `apply --dry-run`, and `apply` on their yes. Never run `import workspace` just to add this sync: a later `apply` deletes the CLI-managed resources a project leaves out.
+
+Read it back before the first sync, whichever path made it: `get_source` on the Reverse ETL source shows its SQL, primary key and, per connected destination, the event type and name, every mapping, the sync mode and the schedule; `list_connections` shows whether the connection is enabled. In the test run, the app saved a primary key one row off from the one picked, and saved the connection disabled, with **Sync now** greyed out until it was switched on.
 
 ## 7. The first sync: one row
 
@@ -172,4 +176,4 @@ The retry behaviour is RudderStack's documented policy for cloud destinations an
 
 - **RudderCrew's half** was run for real with events shaped the way RudderStack's Webhook destination delivers a Reverse ETL row: the rows were accepted, the track triggered the Agent, a decision drafted from the row's columns, and each of the three 400s above was seen. The first track on a new webhook arrived before `properties.email` was marked as an identifier.
 - **The Terraform and rudder-cli specs** in `references/infrastructure-as-code.md` were checked against the provider's and the CLI's own source and docs (provider 5.0, rudder-cli 1.0), not applied.
-- **A full sync from a warehouse to a Shadow Agent's decision** has not been run yet. Until it has, treat the first sync in step 7 as the test.
+- **A full run, end to end**, on a Snowflake model of one account row, set up in the RudderStack app: the first sync succeeded with one row delivered and none failed; the row reached the RudderCrew webhook as `Account Health Snapshot`, every number typed as a number, with RudderStack's `context.sources` job ids beside the properties; and a Shadow account-health Agent decided Red about nine seconds later, its reasons quoting the row's numbers. A second **Sync now** with nothing changed read the row and sent nothing (Upsert). The same run found the app details in steps 4 to 6: upper-case Snowflake names, the identify default, the primary key and the disabled connection. The 400s above were not repeated in this run.

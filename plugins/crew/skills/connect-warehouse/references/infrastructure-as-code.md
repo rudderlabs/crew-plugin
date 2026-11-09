@@ -4,7 +4,7 @@ Both create the same three things as the RudderStack app: a Reverse ETL source (
 
 Both name the warehouse account by id. `list_sources` with `retl_type: "all"` on the RudderStack MCP shows it as `accountId` on any existing Reverse ETL source; a new account is added in the app, because it holds the warehouse credentials.
 
-Column names are matched exactly. Snowflake returns unquoted names in upper case (`ACCOUNT_ID`), so `primary_key`, `identifiers.from` and `mappings.from` use that case there.
+Column names are matched exactly as the warehouse returns them. Snowflake returns an unquoted name in upper case, so quote lower-case aliases in the model (SKILL.md step 4) and use those names in `primary_key`, `identifiers.from` and `mappings.from`. A destination's name takes letters, digits and spaces; the app refuses a colon.
 
 ## Terraform
 
@@ -32,18 +32,18 @@ variable "crew_webhook_token" {
 }
 
 resource "rudderstack_retl_source_model" "account_health" {
-  name                   = "RudderCrew: account health"
+  name                   = "RudderCrew account health"
   source_definition_name = "snowflake"
   account_id             = "<warehouse account id>"
 
   config {
-    primary_key = "ACCOUNT_ID"
+    primary_key = "account_id"
     sql         = file("${path.module}/account_health.sql")
   }
 }
 
 resource "rudderstack_destination_webhook" "crew_account_health" {
-  name = "RudderCrew: account health"
+  name = "RudderCrew account health"
 
   config {
     webhook_url    = var.crew_webhook_url
@@ -72,17 +72,17 @@ resource "rudderstack_retl_connection" "account_health_to_crew" {
   }
 
   identifiers {
-    from = "ACCOUNT_ID"
+    from = "account_id"
     to   = "user_id"
   }
 
   mappings {
-    from = "PLAN"
+    from = "plan"
     to   = "properties.plan"
   }
 
   mappings {
-    from = "ACTIVE_USERS_7D"
+    from = "active_users_7d"
     to   = "properties.active_users_7d"
   }
 
@@ -118,10 +118,10 @@ metadata:
   name: account-health-model
 spec:
   id: account-health-model
-  display_name: "RudderCrew: account health"
+  display_name: "RudderCrew account health"
   account_id: "<warehouse account id>" # or account: "#account:<spec id>" when the project manages the account
   source_definition: snowflake
-  primary_key: ACCOUNT_ID
+  primary_key: account_id
   enabled: true
   sql: |
     SELECT ...
@@ -132,7 +132,7 @@ metadata:
   name: crew-account-health
 spec:
   id: crew-account-health
-  display_name: "RudderCrew: account health"
+  display_name: "RudderCrew account health"
   type: webhook
   definition_version: 1
   enabled: true
@@ -163,12 +163,12 @@ spec:
           type: track
           name: Account Health Snapshot
         identifiers:
-          - from: ACCOUNT_ID
+          - from: account_id
             to: user_id
         mappings:
-          - from: PLAN
+          - from: plan
             to: properties.plan
-          - from: ACTIVE_USERS_7D
+          - from: active_users_7d
             to: properties.active_users_7d
 ```
 
