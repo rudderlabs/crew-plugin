@@ -95,8 +95,18 @@ jobs:
           fi
           base=$(git show "HEAD^1:$manifest" | jq -r .version)
           head=$(git show "HEAD:$manifest" | jq -r .version)
-          newest=$(printf '%s\n%s\n' "$base" "$head" | sort -V | tail -n 1)
-          if [ "$head" = "$base" ] || [ "$newest" != "$head" ]; then
+          # A plain MAJOR.MINOR.PATCH release, no leading zeros: a pre-release, build tag or missing
+          # version cannot be ordered against the base by a numeric comparison.
+          triplet='^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'
+          for v in "$base" "$head"; do
+            if ! [[ "$v" =~ $triplet ]]; then
+              echo "::error file=$manifest::version \"$v\" is not MAJOR.MINOR.PATCH (for example 0.8.1)."
+              exit 1
+            fi
+          done
+          IFS=. read -r b1 b2 b3 <<< "$base"
+          IFS=. read -r h1 h2 h3 <<< "$head"
+          if ! (( h1 > b1 || (h1 == b1 && (h2 > b2 || (h2 == b2 && h3 > b3))) )); then
             echo "::error file=$manifest::plugins/crew changed, but version is $head against the base branch's $base. Bump it above $base: a patch for wording, a minor for a new skill."
             exit 1
           fi
