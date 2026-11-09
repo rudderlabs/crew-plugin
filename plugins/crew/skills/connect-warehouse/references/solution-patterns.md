@@ -87,10 +87,13 @@ FROM account_usage_weekly WHERE is_customer
 
 ```sql
 SELECT CAST(u.user_id AS VARCHAR) AS "user_id", u.email AS "email", u.plan AS "plan",
-       l.limit_name AS "limit_name"
+       LISTAGG(l.limit_name, ', ') WITHIN GROUP (ORDER BY l.limit_name) AS "limits_near"
 FROM trial_users u JOIN trial_limits l ON l.user_id = u.user_id
 WHERE u.trial_ends_at > CURRENT_DATE AND l.limit_pct_used >= 80
+GROUP BY u.user_id, u.email, u.plan
 ```
+
+A user near two limits is still one row, its `limits_near` listing both in a fixed order (`STRING_AGG(l.limit_name, ', ' ORDER BY l.limit_name)` on BigQuery and Postgres). Reaching a further limit changes that list, so the member is sent again under Upsert: a new reason to act, and one more decision in the budget. To act only on one limit, filter to it (`AND l.limit_name = 'api_calls'`) and drop the aggregate.
 
 - **Sync mode:** Upsert, so a member is sent once, on entry, as long as the model's columns stay the same while they are in the set. That is why the model leaves out `limit_pct_used`: it rises 80 → 85 → 90 and would send the member again each time. If each step should be a decision, map a band (`'80_to_90'`, `'over_90'`) and count those steps in the budget. **Schedule:** hourly to daily. **Event name:** `Trial Limit Approaching`, `Account Milestone Reached`.
 - **Agent:** the row is the reason to act, so Observe can be thin; Decide's Options are the messages worth sending; Act emails the person (`properties.email` mapped, and marked as an identifier after the first arrival, `SKILL.md` step 7) or tells the team. Follow-ups are often wanted here: a person near a limit gets a short sequence.

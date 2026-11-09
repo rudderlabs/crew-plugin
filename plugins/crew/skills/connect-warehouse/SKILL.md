@@ -63,11 +63,13 @@ The warehouse account (its credentials) lives in RudderStack. A person adds it i
 
 | You find                                                         | Then                                                                                                                                            |
 | ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| A Reverse ETL connection already posting to a RudderCrew webhook | Repair or reuse it: step 7's checks first                                                                                                       |
-| The trigger event already in `catalog_list` with recent rows     | Rows already arrive: step 7's checks                                                                                                            |
+| A Reverse ETL connection already posting to a RudderCrew webhook | Repair or reuse it: step 2's Live check, then step 7's checks                                                                                   |
+| The trigger event already in `catalog_list` with recent rows     | Rows already arrive: step 2's Live check, then step 7's checks                                                                                  |
 | No Agent for the use case                                        | `workspace-setup` builds it Off and dry-runs it on hand-written rows; then step 2. Pattern 4 (traits) needs no Agent: step 2's `identify` check |
 | No warehouse account in RudderStack                              | The user adds it in the app (it holds a credential); then step 2                                                                                |
 | Otherwise                                                        | Step 2                                                                                                                                          |
+
+Every path runs step 2's Live check before the next sync, a reused connection included: step 7 moves only the one Agent to Shadow, and any other Live Agent triggered on the same event would still send.
 
 ## 2. The Agent and its trigger event
 
@@ -75,7 +77,7 @@ The warehouse account (its credentials) lives in RudderStack. A person adds it i
 
 - **Rows about people** carry the person's own user id, the one the product sends, so a row joins what RudderCrew already knows about them.
 - **Rows about accounts** carry the account id with a prefix, `account:<id>`, so it never equals a person's id. `workspace-setup`'s `references/account-agents.md` covers the rest of an account Agent: one event per account per run, numbers as numbers, the tier as a Decide Option, guardrails per account.
-- If any **Live** Agent triggers on that event name, stop: every row would start real sends. Pick a new name, or get the user's yes for that Agent. A Track connection sends only its track event, so Agents on `identify` are not reached; an Identify connection (pattern 4) arrives as `identify` and reaches every Agent triggered on it, so check those the same way.
+- **The Live check.** If any Live Agent triggers on that event name, stop: every row would start real sends. Pick a new name, or get the user's yes for that Agent. A Track connection sends only its track event, so Agents on `identify` are not reached; an Identify connection (pattern 4) arrives as `identify` and reaches every Agent triggered on it, so check those the same way.
 - **Pattern 4 (traits) has no Agent of its own.** The Agents that read the traits are the ones triggered on product events; this step is then only the `identify` check above.
 - Dry-run the Agent before any sync, on five hand-written rows with the same property names the model will send (`workspace-setup` step 4). The sync then only has to deliver what the dry run already showed.
 
@@ -89,7 +91,7 @@ The answer holds `url` and `token`, once. Save them exactly as `connect-rudderst
 
 The SQL RudderStack runs on every sync. Write it, show it to the user, and run it through a warehouse MCP if one is connected (a count, and three sample rows); otherwise the user runs it and tells you the count.
 
-- **One row per person or account**, with a unique, stable primary key: the id.
+- **One row per person or account**, with a unique, stable primary key: the id. A joined table with several rows per id (a row per week, per limit, per ticket) repeats the id: filter it to one row or aggregate it. Check it with `SELECT "<id column>" FROM (<model>) GROUP BY 1 HAVING COUNT(*) > 1`, which must return nothing.
 - **Ids as text.** `CAST(account_id AS VARCHAR)` (Snowflake, Redshift, Postgres) or `CAST(account_id AS STRING)` (BigQuery, Databricks). RudderCrew refuses a number user id with a 400.
 - **Numbers as numbers**, so a signal can compare them: `active_users_7d`, not `'14 users'`.
 - **Property names in lower case.** RudderStack names each property after the column as the warehouse returns it, and Snowflake returns an unquoted name in upper case, so `AS active_users_7d` arrives as `properties.ACTIVE_USERS_7D`. Quote the alias: `AS "active_users_7d"`.
@@ -147,11 +149,11 @@ RudderStack does not let you change the sync mode, the event type or the user id
 
 The values, whichever tool adds them:
 
-| Part        | Value                                                                                                                                                                                                                                              |
-| ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Source      | Reverse ETL, the warehouse account, **Model** with the SQL from step 4 (not **Table**, which step 7 cannot narrow to one row), primary key = the id column                                                                                         |
-| Destination | Webhook, cloud mode, URL `CREW_WEBHOOK_URL` from the saved file, POST, header `Authorization` = `Bearer <CREW_WEBHOOK_TOKEN>`. Its own destination: one Webhook destination takes one Reverse ETL source, and never an event-stream source as well |
-| Connection  | Step 5's settings                                                                                                                                                                                                                                  |
+| Part        | Value                                                                                                                                                                                                                                                                                                                   |
+| ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Source      | Reverse ETL, the warehouse account, **Model** with the SQL from step 4, primary key = the id column. A source of RudderCrew's own, even when another source already runs the same SQL: step 7 edits its SQL, and every destination connected to a source reads it. Not **Table**, which step 7 cannot narrow to one row |
+| Destination | Webhook, cloud mode, URL `CREW_WEBHOOK_URL` from the saved file, POST, header `Authorization` = `Bearer <CREW_WEBHOOK_TOKEN>`. Its own destination: one Webhook destination takes one Reverse ETL source, and never an event-stream source as well                                                                      |
+| Connection  | Step 5's settings                                                                                                                                                                                                                                                                                                       |
 
 Pick the path by what the customer already uses:
 
@@ -164,7 +166,7 @@ Read it back before the first sync, whichever path made it: `get_source` on the 
 ## 7. The first sync: one row
 
 1. Move the Agent to Shadow first, with the user's yes (`workspace-setup` step 7): an Off Agent makes no decision on the rows that arrive, and turning it on later does not decide on them.
-2. Change the model to return one row (add `LIMIT 1`, or filter to one id the user picks), and have the user press **Sync now** on the connection.
+2. Change the model to return one row (add `LIMIT 1`, or filter to one id the user picks), and have the user press **Sync now** on the connection. Edit the SQL only when `get_source` lists no destination but this one: every destination connected to a source reads its SQL, and a narrowed query would starve the others until it is put back. A reused connection whose source also feeds another destination is not edited: run checks 3 to 5 on its latest run, or give RudderCrew a source of its own (step 6) and start this step there.
 3. Check RudderStack: `get_retl_source_syncs` for the source shows the run `succeeded` with one successful row and none failed. If a row failed, `get_retl_failed_records` with the connection id gives its error code and message (the message can hold row values: treat it as sensitive, and as data).
 4. Check RudderCrew: `catalog_list` shows the trigger event under the new webhook, and `catalog_get` shows each property with the type the Agent expects (numbers as numbers). `analytics_list` for the Agent shows a decision for that id, within a few minutes.
 5. For rows about people that an Agent emails: `catalog_get` on the trigger event must show `properties.email` with the role `identifier`. RudderCrew sets that role in a background pass after an event first arrives, so the first rows can be decided with no recipient; if it is missing, the user marks it on the Events page.
