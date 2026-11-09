@@ -19,7 +19,7 @@ The plugin also connects the Crew MCP server (`https://crew.rudderstack.com/mcp`
 ## Before you start
 
 - **A Crew workspace you can sign in to.** Crew is invite-only today: the RudderStack team sets up the workspace and invites you, and there is no self sign-up. Without an invite the plugin installs, but the sign-in finds no workspace: ask your RudderStack contact first. Your role in the workspace decides what Claude can do.
-- **Workspace features the RudderStack team turns on when you ask:** **Profile enrichment** (research about a person or company, used by lead-scoring and linkedin-campaign) and the **HeyReach channel** (the LinkedIn skills). When one is off, the skills that use it say what to ask for and carry on without it.
+- **Workspace features:** **Profile enrichment** (research about a person or company, used by lead-scoring and linkedin-campaign) is on by default. The **HeyReach channel** (the LinkedIn skills) is one the RudderStack team turns on when you ask. When a feature is off, the skills that use it say what to ask for and carry on without it.
 - **Python 3.8 or later, run as `python3`,** for the skills' scripts and the hook. On Windows, check that `python3 --version` works in the shell Claude Code uses.
 - **No channels to start.** Shadow needs none. Connect channels in the Crew app before an Agent goes Live.
 
@@ -69,7 +69,7 @@ Installing plugin "crew@rudder-crew"...
 
 $ claude plugin list
   ❯ crew@rudder-crew
-    Version: 0.6.4
+    Version: 0.7.2
     Scope: user
     Status: ✔ enabled
 ```
@@ -125,7 +125,7 @@ Restart Claude Code (or run `/reload-plugins`) after an update.
 | The sign-in is refused, finds no workspace, or the server fails right after | Your account has no role in a Crew workspace yet. Ask your RudderStack contact for an invite.                                                                                                                                                            |
 | `403 insufficient_scope`                                                    | Your role in that workspace holds none of the permissions the tools need. A workspace admin changes it in Crew under Settings → Members.                                                                                                                 |
 | `FORBIDDEN: Missing permission: <slug>`                                     | That one step needs a role with that permission. Everything else still works.                                                                                                                                                                            |
-| `Profile enrichment is not enabled for this workspace`                      | Ask the RudderStack team to turn on Profile enrichment. The skill carries on without it.                                                                                                                                                                 |
+| `Profile enrichment is not enabled for this workspace`                      | It is on by default, so this workspace has it switched off: ask the RudderStack team to turn it back on. The skill carries on without it.                                                                                                                |
 | `python3: command not found`, or a script fails on an older Python          | Install Python 3.8 or later.                                                                                                                                                                                                                             |
 | Connected to the wrong workspace                                            | Clear the Crew server's authentication in `/mcp`, then sign in again.                                                                                                                                                                                    |
 | The Decisions page is empty after the Agent went to Shadow                  | Shadow decides only on trigger events that arrive after it is on. Test events sent while the Agent was Off are not replayed, and Crew ignores a repeat of the same send: ask Claude to send them again under a new `--run` label, or wait for real ones. |

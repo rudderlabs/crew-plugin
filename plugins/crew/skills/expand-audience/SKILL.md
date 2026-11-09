@@ -18,7 +18,8 @@ Ask the user; never work around them.
 
 - Create the loopback channel in Settings → Channels (channels cannot be created over MCP).
 - Connect HeyReach, or an email channel, in Crew.
-- Ask the RudderStack team to enable a workspace feature: the HeyReach channel, Profile enrichment, web search, approval before send.
+- Ask the RudderStack team to enable the HeyReach channel or approval before send, which are off until they turn them on.
+- Ask the RudderStack team to turn Profile enrichment or web search back on, if this workspace has either switched off. Both are on by default.
 - Switch an Agent Live. `agent_update` refuses `live` on purpose.
 
 Where a piece is missing, say so in one line and tell them to ask the RudderStack team, then build what works: a CSV seed with `research_account` alone still finds people, and Outreach can wait for its channel.
