@@ -1,7 +1,7 @@
 ---
 name: expand-audience
 description: Use when someone has a list of companies, accounts or firms and wants Crew to find the right person at each and reach out, when they say "find the right person at these companies", "expand my audience from this list", "I have a list of companies to reach", or "set up a personal outreach agent from my contacts or LinkedIn connections", when they paste a multi-part outreach plan (contact intelligence, outreach, follow-up, content) and ask whether Crew can do it, or when a visitor-identification feed names companies and they want the people there.
-compatibility: Needs the Crew MCP on the user's workspace with webhook access (an admin or member sign-in, or a `setup` token), Python 3, a machine that can reach the Crew webhook (Claude Code or Cowork), the sibling skills send-list and linkedin-outreach (the crew plugin installs all three), and for LinkedIn a HeyReach channel, a workspace feature the RudderStack team enables on request.
+compatibility: Needs the Crew MCP on the user's workspace with webhook access (an admin or member sign-in, or a `setup` token), Python 3, a machine that can reach the Crew webhook (Claude Code or Cowork), the sibling skills send-list and linkedin-outreach (the crew plugin installs all three), and for LinkedIn a HeyReach channel (a workspace feature: the plugin README's Workspace features table).
 ---
 
 # Expand an audience: from accounts to the right people
@@ -18,11 +18,10 @@ Ask the user; never work around them.
 
 - Create the loopback channel in Settings → Channels (channels cannot be created over MCP).
 - Connect HeyReach, or an email channel, in Crew.
-- Ask the RudderStack team to enable the HeyReach channel or approval before send, which are off until they turn them on.
-- Ask the RudderStack team to turn Profile enrichment or web search back on, if this workspace has either switched off. Both are on by default.
+- Get a workspace feature turned on where this workspace lacks one it needs: the HeyReach channel for LinkedIn, Profile enrichment and the built-in web tools for research. [Workspace features](../../README.md#workspace-features) says who changes them and how to tell.
 - Switch an Agent Live. `agent_update` refuses `live` on purpose.
 
-Where a piece is missing, say so in one line and tell them to ask the RudderStack team, then build what works: a CSV seed with `research_account` alone still finds people, and Outreach can wait for its channel.
+Where a piece is missing, say so in one line and who to ask, then build what works: a CSV seed with `research_account` alone still finds people, and Outreach can wait for its channel.
 
 ## 1. Scope the ask
 
@@ -89,10 +88,10 @@ A Shadow Agent posts nothing on any channel, the loopback included, so Expand in
 
 Tell the user to do these, in this order, with the reasons:
 
-1. **Check approval is real.** With the workspace's approval-before-send feature off, `needsApproval: true` is accepted and ignored, and nothing over MCP shows the feature. Open one Outreach action in the editor: the "needs approval" switch on the action card shows only when the feature is on. No switch means ask the RudderStack team before going Live.
+1. **Check approval is on.** Open each Outreach action in the editor: its "needs approval" switch is on, so every Live message waits on the Decisions page for a person's OK.
 2. **Switch Outreach Live** in the editor.
 3. **Replay `found.csv` with `--pass live`**, and send `people.csv` again with `--key profile --pass live` when there is one. Live acts only on new events, and the replay costs no second research. A new pass makes new message ids; Crew forgets the Shadow ones after about a day anyway.
-4. **Read Expand's Shadow `linkedin_url` values once more** (`analytics_get`): every one is a `linkedin.com/in/` profile. A blank one was refused, but a wrong value (a company page, a placeholder word) would post Live and mint a person keyed by nothing better than the decision id. Then **switch Expand Live**, so new seed rows flow end to end from now on. Its only action posts to Crew's own webhook; Live Expand reaches no person. After its first Live decision is delivered (a new seed row, or one account sent under a new pass), Outreach must decide on the hand-off: within a few minutes, `analytics_list` for Outreach (`mode: "live"`, and `outcomes` naming every outcome: `delivered`, `converted`, `awaiting_approval`, `rejected`, `no_action`, `blocked`, `rate_limited`, `deduplicated`, `failed`, `scheduled`, `expired`, because the question is only whether Outreach decided on the hand-off at all: with approval on, the working case is `awaiting_approval`, and a person the replay already handed over comes back `deduplicated`, and an omitted `outcomes` leaves both out) shows a decision for that person whose `eventProperties.decisionId` (`analytics_get`) is the Expand decision's id. The person alone proves nothing, since the replay already minted them. No such decision after ten minutes means the hand-off failed: read the Expand decision's dispatch (`analytics_get`: delivered, or its dispatch error) and then the channel (`handoff.md` § 2, which the Shadow stage never exercised), and switch Expand Off until it is found.
+4. **Read Expand's Shadow `linkedin_url` values once more** (`analytics_get`): every one is a `linkedin.com/in/` profile. A blank one was refused, but a wrong value (a company page, a placeholder word) would post Live and mint a person keyed by nothing better than the decision id. Then **switch Expand Live**, so new seed rows flow end to end from now on. Its only action posts to Crew's own webhook; Live Expand reaches no person. After its first Live decision is delivered (a new seed row, or one account sent under a new pass), Outreach must decide on the hand-off: within a few minutes, `analytics_list` for Outreach (`mode: "live"`, and `outcomes` naming every outcome: `delivered`, `converted`, `awaiting_approval`, `rejected`, `no_action`, `blocked`, `rate_limited`, `deduplicated`, `failed`, `scheduled`, `expired`, because the question is only whether Outreach decided on the hand-off at all: with approval on, the working case is `awaiting_approval`, and a person the replay already handed over comes back `deduplicated`, and an omitted `outcomes` leaves both out) shows a decision for that person whose `eventProperties.decisionId` (`analytics_get`) is the Expand decision's id. The person alone proves nothing, since the replay already minted them. No such decision after ten minutes means the hand-off failed: read the Expand decision's dispatch (`analytics_get`: delivered, or its dispatch error) and then the channel (`handoff.md` § 2, which the Shadow stage never exercised), and switch Expand Off while you find it.
 
 The Decisions page and its pending approvals list are the one place to see what is waiting. To stop everything at once: `agent_update` to `off` on both Agents.
 

@@ -73,7 +73,7 @@ Every path runs step 2's Live check before the next sync, a reused connection in
 
 ## 2. The Agent and its trigger event
 
-`agent_get` on the Agent that will decide on each row. Its trigger event name is the one fixed name every row is sent under, character for character: letters, digits, spaces and `_ : . / -` only (`Account Health Snapshot`, `Lead Score Updated`). Nothing else should send that name, so the Agent decides only on these rows.
+`agent_get` on the Agent that will decide on each row. Its trigger event name is the one fixed name every row is sent under, character for character, and must be one Crew accepts (`workspace-setup`'s `references/events-catalog.md` → "Events Crew refuses"): `Account Health Snapshot`, `Lead Score Updated`. Nothing else should send that name, so the Agent decides only on these rows.
 
 - **Rows about people** carry the person's own user id, the one the product sends, so a row joins what RudderCrew already knows about them.
 - **Rows about accounts** carry the account id with a prefix, `account:<id>`, so it never equals a person's id. `workspace-setup`'s `references/account-agents.md` covers the rest of an account Agent: one event per account per run, numbers as numbers, the tier as a Decide Option, guardrails per account.
@@ -141,7 +141,7 @@ The connection's other settings:
 | User identifier | `user_id`, from the id column                                                                                                                    |
 | Mappings        | Each column the Agent reads → `properties.<name>` (Track) or `traits.<name>` (Identify); the email column → `properties.email` or `traits.email` |
 | Schedule        | Manual until step 7 passes                                                                                                                       |
-| Failed records  | **Retain and show failures** on, so `get_retl_failed_records` can read the rows RudderCrew refuses; it is off by default                         |
+| Failed records  | **Retain and show failures** on, so `get_retl_failed_records` can read the rows RudderCrew refuses; RudderStack leaves it unticked               |
 
 RudderStack does not let you change the sync mode, the event type or the user identifier of a saved connection; Terraform and rudder-cli replace or refuse it. To change one, make a new connection. Its first sync sends every row again, and the Agent decides on every one of them again.
 

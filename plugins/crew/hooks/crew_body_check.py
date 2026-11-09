@@ -7,8 +7,8 @@ over the body just saved and hands its findings to Claude as context. It never
 blocks: a draft may be half-built, and check_body.py can lag the newest body
 shapes.
 
-Nothing here guards the runtime state: the server creates every MCP-made Agent
-Off, turns it on in Shadow, and never takes one Live over MCP.
+Nothing here guards the runtime state: the server never takes an Agent Live
+over MCP (workspace-setup's references/agent-schema.md, "Runtime state").
 
 A failure inside this check lets the call through and says why on stderr.
 Standard library only.

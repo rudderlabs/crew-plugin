@@ -44,7 +44,7 @@ import json
 import re
 import sys
 
-WORDS_CHANNEL_TYPES = {"customerio", "clevertap", "twilio", "braze", "heyreach", "slack"}
+WORDS_CHANNEL_TYPES = {"customerio", "clevertap", "twilio", "braze", "heyreach", "email", "slack"}
 WORDS_MEDIA = {"email", "slack", "clevertap", "twilio", "braze", "heyreach"}
 THIN_INSTRUCTIONS = 150  # characters; below this the writer falls back to its defaults
 # Mirrors the writer's rule for a static outputFields list: these names are plain text, and every

@@ -1,7 +1,7 @@
 ---
 name: lead-scoring
 description: Build a lead-scoring Agent in RudderCrew (Crew) that reads each lead's fit, role and intent separately, picks a tier (Hot, Warm or Cold) with its reasons, and routes it - Hot to sales in Slack, Warm to nurture, Cold recorded - then dry-runs it, runs it in Shadow and measures it against outcomes. Use when someone wants to score, qualify, prioritise or route leads, signups or trial users with Crew; asks which signups sales should call first; wants MQL, PQL, ICP-fit or predictive lead scoring; or wants inbound leads tiered and handed to sales. Trigger even when the user names only the company ("set up lead scoring for Acme") without saying Crew.
-compatibility: The Crew MCP connected to the user's workspace; the workspace-setup skill in the same plugin (schema, message writing, check_body.py). The optional Fit enrichment needs the workspace's Profile enrichment feature (on by default; the Agent works without it), the built-in web tools (on by default), and users:read on the Crew MCP (the user's role over the OAuth sign-in, or a token with the people scope).
+compatibility: The Crew MCP connected to the user's workspace; the workspace-setup skill in the same plugin (schema, message writing, check_body.py). The optional Fit enrichment needs two workspace features, Profile enrichment and the built-in web tools (the plugin README's Workspace features table; the Agent works without them), and users:read on the Crew MCP (the user's role over the OAuth sign-in, or a token with the people scope).
 ---
 
 # Lead scoring with Crew
@@ -33,9 +33,9 @@ Ask the user; never work around them.
 
 - Create channels (a sales Slack channel, a webhook for Cold, Customer.io for nurture). The MCP
   lists channels but cannot create them.
-- Get Profile enrichment turned back on, if the Fit enrichment is wanted and this workspace has it
-  switched off (step 3 shows how to tell). It is on by default; only the RudderStack team can turn it
-  back on. Don't wait for it: build without Fit research and add it later.
+- Get Profile enrichment or the built-in web tools turned on, if the Fit enrichment is wanted and
+  this workspace has either off (step 3 shows how to tell; [Workspace features](../../README.md#workspace-features)
+  says who changes them). Don't wait for it: build without Fit research and add it later.
 - Agree the gate's pass thresholds (`references/measuring.md`).
 - Switch the Agent Live.
 
@@ -79,10 +79,9 @@ Ask for what you cannot read from the workspace:
 Company facts belong in a profile enrichment, which is prepared before the Agent decides. Without
 one, Fit reads only the traits and the email's domain, and most leads come out Unknown.
 
-The enrichment needs two workspace features. **Profile enrichment** is on by default; if someone
-switched it off, the RudderStack team turns it back on. The **built-in web tools** (`web_search`,
-`web_fetch`), which the template researches with, are on unless someone turned them off. When both
-are on, this step just works.
+The enrichment needs two workspace features: **Profile enrichment**, and the **built-in web tools**
+(`web_search`, `web_fetch`) the template researches with. [Workspace features](../../README.md#workspace-features)
+says whether a new workspace has them. When both are on, this step just works.
 
 1. Fill `references/fit-enrichment.json`: the ICP in the brief, the industry options.
 2. `enrichment_preview` with two real leads (a strong fit and a weak one) and show the user the
@@ -91,15 +90,15 @@ are on, this step just works.
 
 The preview in 2 tells you what the workspace has:
 
-- `FORBIDDEN` "Profile enrichment is not enabled for this workspace": the feature was switched off.
+- `FORBIDDEN` "Profile enrichment is not enabled for this workspace": the feature is off here.
 - `BAD_REQUEST` "A source is missing, disabled, or unavailable in this workspace": the web tools are
   off.
 - `FORBIDDEN` "Missing permission: users:read": the caller can't read people. Over the OAuth sign-in
   that is the user's role; on a personal access token, the `people` scope.
 
 On any of these, skip this step and build the Agent without `enrichmentIds`: Fit then reads the
-traits and the email's domain. Tell the user what to ask for (the RudderStack team enables the two
-features; a workspace admin changes a role), and come back to this step once it is in place.
+traits and the email's domain. Tell the user what to ask for (a feature, from whoever the features
+table names; a role, from a workspace admin), and come back to this step once it is in place.
 A Role research enrichment (title and seniority from LinkedIn) and a Moment enrichment
 (funding, hiring, a new leader) follow the same pattern; add a `moment` signal and mention Moment
 in the Cold option when you add the latter.
@@ -124,8 +123,8 @@ Start from `references/agent-body.json` and replace every `<placeholder>`:
   `act-writing.md`. With a Customer.io template the writer fills the template's `{{trigger.*}}`
   keys (`subject` and `body` are only the fallback), so name each of those keys. The Cold webhook
   needs none.
-- Keep `launchMode: "shadow"`. The server creates an MCP-made Agent Off and turns it on in Shadow
-  anyway; the body should say what it will run as.
+- Keep `launchMode: "shadow"`, so the body says what it will run as (`workspace-setup`'s
+  `references/agent-schema.md` → "Runtime state, drafts and publishing").
 
 Run `workspace-setup`'s `scripts/check_body.py` on the body and fix every ERROR. Expect one WARN
 for the Cold webhook having no message instructions; that one is correct.

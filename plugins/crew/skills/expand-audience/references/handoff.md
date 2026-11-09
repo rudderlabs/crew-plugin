@@ -49,11 +49,11 @@ sed -n 's/^CREW_WEBHOOK_URL=//p' ~/crew-lists/webhooks/<webhookId>.env | pbcopy
 sed -n 's/^CREW_WEBHOOK_TOKEN=/Bearer /p' ~/crew-lists/webhooks/<webhookId>.env | pbcopy
 ```
 
-Then `channels_list` for the new channel's id: that is `<LOOPBACK_CHANNEL_ID>` in the Expand body. A workspace that already has a webhook channel named like a loopback may reuse it, but only once the user has opened it in Settings → Channels and checked it: the URL is this webhook's (`/webhook/<webhookId>/events`, the id in the file's name) and the `Authorization` header is set again from the file, since the MCP shows neither a channel's URL nor its headers. The name proves nothing. Shadow never posts through the channel and the replay posts with the file directly, so a channel pointing at an old webhook passes every check before Live and is found out only by Live Expand's first decision, which SKILL.md step 9 checks for that reason.
+Then `channels_list` for the new channel's id: that is `<LOOPBACK_CHANNEL_ID>` in the Expand body. A workspace that already has a webhook channel named like a loopback may reuse it, but only once the user has opened it in Settings → Channels and checked it: the URL is this webhook's (its `CREW_WEBHOOK_URL`, which ends in the id in the file's name) and the `Authorization` header is set again from the file, since the MCP shows neither a channel's URL nor its headers. The name proves nothing. Shadow never posts through the channel and the replay posts with the file directly, so a channel pointing at an old webhook passes every check before Live and is found out only by Live Expand's first decision, which SKILL.md step 9 checks for that reason.
 
 ## 3. The lead event name
 
-Expand's action name is the lead event name: the loopback mapping reads `action` as the event. Pick it with the user once (`<Launch> Lead Found`), and keep it to letters, digits, spaces and `_ : . / -`, which is all Crew accepts in an event name; the send script refuses anything else before it sends.
+Expand's action name is the lead event name: the loopback mapping reads `action` as the event. Pick it with the user once (`<Launch> Lead Found`), and keep it to a name Crew accepts (`workspace-setup`'s `references/events-catalog.md` → "Events Crew refuses"); the send script refuses anything else before it sends.
 
 ## 4. What the Outreach Agent receives
 
