@@ -8,8 +8,8 @@ every file git tracks under plugins/crew/, plus the root README.md and llms.txt,
     rudder-crew, so the bare word passes; a repository path, or a pull request on it, does not;
   - a host under rudderlabs.com, which is internal, unless PUBLIC_HOSTS lists it;
   - a UUID, which reads as a workspace, Agent or person id from a real run;
-  - a pull-request reference such as #1234 or owner/repo#1234. A six-digit colour such as
-    #122633 passes.
+  - a pull-request reference such as #1234 or owner/repo#1234, of any length. A bare six- or
+    eight-digit number passes, since it reads as a colour such as #122633.
 
 Run it from the repository root: python3 -I .github/scripts/check_public_text.py
 Exit code 1 on any finding, with one GitHub annotation per line found. Standard library only.
@@ -31,10 +31,13 @@ RULES = [
      re.compile(r"rudderlabs/rudder-crew\b|rudder-crew[#/]|rudder-claw", re.I)),
     ("names a UUID, which reads as an id from a real workspace; use a <placeholder>",
      re.compile(r"\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b", re.I)),
-    # A bare #1234, or one qualified by its repository (owner/repo#1234). An HTML entity (&#123;),
-    # a heading marker (##) and a word run into a # (step#2) are not references.
+    # A pull request qualified by its repository (owner/repo#123456), at any length, or a bare one
+    # (#1234) at any length but six or eight digits, which read as an all-digit colour (#122633).
+    # An HTML entity (&#123;), a heading marker (##) and a word run into a # (step#2) are not
+    # references.
     ("names a pull request; say what changed instead",
-     re.compile(r"(?<![A-Za-z0-9&#])#[0-9]{1,5}\b|\b[\w.-]+/[\w.-]+#[0-9]{1,5}\b")),
+     re.compile(r"\b[\w.-]+/[\w.-]+#[0-9]+\b"
+                r"|(?<![A-Za-z0-9&#])#(?:[0-9]{1,5}|[0-9]{7}|[0-9]{9,})\b")),
 ]
 
 
