@@ -161,7 +161,12 @@ Offer the three ways on:
   events and the cards that still differ.
 - **Publish to Shadow**: first read the overview's `unappliedAnswerCount`. Above 0, some answers came
   after the last Apply and the version would leave them out; publishing closes the round, so offer
-  to apply first and wait for it. Then confirm with the user and call `calibrate_publish` with
+  to apply first and wait for it. When `agentStatus` is `off`, the publish turns the Agent on, so
+  first tell the user how often its trigger fires (`catalog_list` counts) and that every match is one
+  model decision. On a busy trigger, offer to stop here instead: the working copy keeps every applied
+  change, and the trigger can be narrowed with a condition (`when`) before the Agent goes to Shadow.
+  Editing the working copy now would refuse this publish (`CALIBRATE_DRAFT_CHANGED`). Otherwise
+  confirm with the user and call `calibrate_publish` with
   `target: 'shadow'`, `expectedStatus` from eligibility's `agentStatus`, and `expectedDraftRevision`
   from the latest overview's `draft.currentRevision` (an Apply moves it). An Off Agent starts
   running in Shadow (it decides on real users and sends nothing); a Shadow Agent gets the new

@@ -26,7 +26,9 @@ Check these first; when one is missing, stop and tell the user what to set up.
 - **In the workspace:** a HeyReach channel (`channels_list`), and three workspace features. The
   **HeyReach channel** feature lets HeyReach be connected at all, and **Profile enrichment** runs the
   research enrichments (enrichment tools answer FORBIDDEN "Profile enrichment is not enabled for this
-  workspace" without it). The RudderStack team enables both on request; no one in the workspace can.
+  workspace" without it). The RudderStack team enables the HeyReach channel on request. Profile
+  enrichment is on by default, so that refusal means it was switched off; the team turns it back on.
+  No one in the workspace can change either.
   The **built-in web tools** (`web_search`, `web_fetch`), which the research enrichments search with,
   are on unless someone turned them off; with them off, research gets no search tool and comes back
   empty, so use a search tool from `mcp_listTools`. When a feature is missing, tell the user what to
