@@ -68,7 +68,8 @@ to the <name> workspace; RudderStack is connected too"), then:
 - Otherwise go straight on with the task, using the plugin's skill that matches it:
   `workspace-setup` for building, fixing or testing any Agent, and for an empty or new
   workspace; `connect-rudderstack` to send their RudderStack events to Crew; `connect-warehouse`
-  to feed an Agent from a warehouse table on a schedule (account health, scores, snapshots);
+  to feed Agents from a warehouse table on a schedule, designing the shape first (a snapshot every
+  run, a change, entering a set, or traits on people);
   `send-list` to hand a list of people to an Agent once; `calibrate` to review an Agent's decisions card by card;
   `lead-scoring` for scoring and routing leads; `expand-audience` to find the right person at each
   company in a list, inside Crew, and hand them to outreach.
@@ -96,7 +97,8 @@ to the <name> workspace; RudderStack is connected too"), then:
 - [connect-rudderstack](https://github.com/rudderlabs/crew-plugin/blob/main/plugins/crew/skills/connect-rudderstack/SKILL.md):
   RudderStack events into Crew through a Webhook destination.
 - [connect-warehouse](https://github.com/rudderlabs/crew-plugin/blob/main/plugins/crew/skills/connect-warehouse/SKILL.md):
-  a warehouse table or SQL model into Crew through a scheduled Reverse ETL sync.
+  a warehouse table or SQL model into RudderCrew through a scheduled Reverse ETL sync, after picking the
+  solution's shape.
 - [expand-audience](https://github.com/rudderlabs/crew-plugin/blob/main/plugins/crew/skills/expand-audience/SKILL.md):
   from a list of companies to the right people, researched inside Crew, then handed to outreach.
 - [RudderStack's agent skills](https://github.com/rudderlabs/rudder-agent-skills): the RudderStack

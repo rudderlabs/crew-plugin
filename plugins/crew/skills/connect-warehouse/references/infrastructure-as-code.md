@@ -106,6 +106,7 @@ What the provider does that the app does not show:
 - **`schedule.every_minutes` is at least 5.** There is no time-zone field; a cron schedule runs in UTC.
 - **`cursor_column`** (Upsert only) reads just the rows whose cursor value is newer than the last run's. It suits a table that only grows; a row whose other columns change without moving the cursor is not sent again.
 - A table instead of a model: `rudderstack_retl_source_table`, with `schema` and `table` in `config` in place of `sql`.
+- **Traits instead of a trigger** (`solution-patterns.md` → pattern 4): `event { type = "identify" }` with no `name`, and each mapping's `to` set to `traits.<name>` (for example `to = "traits.plan"`), as in the provider's own identify examples. The identifier is the person's `user_id`.
 
 ## rudder-cli
 
@@ -188,4 +189,5 @@ What rudder-cli enforces:
 - **One Reverse ETL source per destination**, and never an event-stream source on the same destination.
 - **Mirror is refused** on a Reverse ETL connection, and a basic or cron schedule runs at most every 5 minutes, in UTC.
 - **`sync_behaviour`, `event` and `cursor_column` cannot change** on an existing connection: `apply` fails. Changing `source` or `destination` makes a new connection, whose first sync sends every row again.
+- **Traits instead of a trigger** (pattern 4): `event: { type: identify }` with no `name`, and mappings `to: traits.<name>`.
 - rudder-cli cannot start or report on syncs: Sync now in the app, then `get_retl_source_syncs` on the RudderStack MCP.
