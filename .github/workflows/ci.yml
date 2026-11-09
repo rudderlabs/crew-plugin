@@ -66,3 +66,56 @@ jobs:
         run: |
           "$GITHUB_WORKSPACE/.github/ci/node_modules/.bin/claude" --version
           "$GITHUB_WORKSPACE/.github/ci/node_modules/.bin/claude" plugin validate plugins/crew
+
+  version:
+    name: plugin version bumped
+    # A pull request that changes the plugin must bump its version, or `claude plugin update`
+    # leaves every install on the old files.
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Harden the runner (audit egress)
+        uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25 # v2.22.1
+        with:
+          egress-policy: audit
+
+      # The pull request's merge commit and its first parent, the base branch as it is now.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+
+      - name: Check plugin.json's version moved up
+        run: |
+          manifest=plugins/crew/.claude-plugin/plugin.json
+          if git diff --quiet HEAD^1 HEAD -- plugins/crew; then
+            echo "Nothing under plugins/crew changed."
+            exit 0
+          fi
+          base=$(git show "HEAD^1:$manifest" | jq -r .version)
+          head=$(git show "HEAD:$manifest" | jq -r .version)
+          newest=$(printf '%s\n%s\n' "$base" "$head" | sort -V | tail -n 1)
+          if [ "$head" = "$base" ] || [ "$newest" != "$head" ]; then
+            echo "::error file=$manifest::plugins/crew changed, but version is $head against the base branch's $base. Bump it above $base: a patch for wording, a minor for a new skill."
+            exit 1
+          fi
+          echo "version $base -> $head"
+
+  public-text:
+    name: public text
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Harden the runner (audit egress)
+        uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25 # v2.22.1
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Private repository names, internal hosts, UUIDs and PR numbers in what customers read.
+      - name: Check the public text
+        run: python3 -I .github/scripts/check_public_text.py

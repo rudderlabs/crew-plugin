@@ -144,10 +144,14 @@ Adding or changing a skill: [plugins/crew/README.md → Adding a skill](plugins/
 
 ## Tests
 
-CI runs on every pull request and every push to `main`. It runs the send-list script's tests and `claude plugin validate plugins/crew`, and needs no Crew or Anthropic sign-in; the Claude Code version it uses is pinned in [`.github/ci/package.json`](.github/ci/package.json). `claude plugin validate` fails on a malformed `plugin.json`, one with no `name`, or a `hooks/hooks.json` that isn't valid JSON. It reads each skill's frontmatter but only warns, so an empty `SKILL.md` still passes. It doesn't check that a hook's script exists, and CI doesn't validate the marketplace's plugin source. To run the tests from your clone:
+CI runs on every pull request and every push to `main`. It runs the send-list script's tests, `claude plugin validate plugins/crew`, and a check that the public text (everything under `plugins/crew/`, this README and `llms.txt`) names no private repository, internal host, UUID or pull-request number. On a pull request that changes `plugins/crew/`, it also checks that the version in `plugin.json` went up. None of it needs a Crew or Anthropic sign-in; the Claude Code version it uses is pinned in [`.github/ci/package.json`](.github/ci/package.json). `claude plugin validate` fails on a malformed `plugin.json`, one with no `name`, or a `hooks/hooks.json` that isn't valid JSON. It reads each skill's frontmatter but only warns, so an empty `SKILL.md` still passes. It doesn't check that a hook's script exists, and CI doesn't validate the marketplace's plugin source. To run the tests from your clone:
 
 ```bash
 python3 -I plugins/crew/skills/send-list/scripts/test_send_leads.py -v
+```
+
+```bash
+python3 -I .github/scripts/check_public_text.py
 ```
 
 ## License
