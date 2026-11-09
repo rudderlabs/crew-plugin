@@ -89,16 +89,16 @@ The answer holds `url` and `token`, once. Save them exactly as `connect-rudderst
 
 ## 4. Write the model
 
-The SQL RudderStack runs on every sync. Write it, show it to the user, and run it through a warehouse MCP if one is connected (a count, and three sample rows); otherwise the user runs it and tells you the count.
+The SQL RudderStack runs on every sync. Write it, show it to the user, and run it through a warehouse MCP if one is connected (a count, and three sample rows); otherwise the user runs it and tells you the count. Lookout's `query_warehouse` refuses a query without a literal `LIMIT` on its outermost `SELECT`, so end every check with one (`LIMIT 1` on a count).
 
-- **One row per person or account**, with a unique, stable primary key: the id. A joined table with several rows per id (a row per week, per limit, per ticket) repeats the id: filter it to one row or aggregate it. Check it with `SELECT "<id column>" FROM (<model>) GROUP BY 1 HAVING COUNT(*) > 1`, which must return nothing.
+- **One row per person or account**, with a unique, stable primary key: the id. A joined table with several rows per id (a row per week, per limit, per ticket) repeats the id: filter it to one row or aggregate it. Check it with `SELECT account_id FROM (<model>) GROUP BY 1 HAVING COUNT(*) > 1 LIMIT 1`, which must return nothing (on Snowflake the id is `"account_id"`, as the model quotes it).
 - **Ids as text.** `CAST(account_id AS VARCHAR)` (Snowflake, Redshift, Postgres) or `CAST(account_id AS STRING)` (BigQuery, Databricks). RudderCrew refuses a number user id with a 400.
 - **Numbers as numbers**, so a signal can compare them: `active_users_7d`, not `'14 users'`.
-- **Property names in lower case.** RudderStack names each property after the column as the warehouse returns it, and Snowflake returns an unquoted name in upper case, so `AS active_users_7d` arrives as `properties.ACTIVE_USERS_7D`. Quote the alias: `AS "active_users_7d"`.
+- **Property names in lower case.** RudderStack names each property after the column as the warehouse returns it. Snowflake returns an unquoted name in upper case, so `AS active_users_7d` arrives as `properties.ACTIVE_USERS_7D`: on Snowflake, double-quote each alias, `AS "active_users_7d"`. Elsewhere write the alias in lower case without quotes: BigQuery and Databricks quote names with backticks and read double quotes as a string. The SQL examples in this skill are Snowflake's.
 - **Dates as text properties**, such as `TO_VARCHAR(renewal_date, 'YYYY-MM-DD')`. Never map a timestamp onto the event's own timestamp: one with no time zone is refused with a 400.
 - **Only the columns that should prompt a new decision.** Under Upsert, a changed row is sent again and the Agent decides again. Leave `updated_at`, `last_seen_at`, a raw score and anything else that changes on every rebuild out of the model itself, not only out of the mapping: a test run showed that an unchanged row is not sent again, not whether RudderStack compares the mapped columns or the whole row. Band a number that moves a little all the time (pattern 2).
 - **An email, for an Agent that emails a person**: an `email` column, mapped to `properties.email` (step 6).
-- **A model, even over a table that already has exactly these columns**: `SELECT "account_id", "plan", ... FROM <schema>.<table>`. Step 7 narrows the model to one row for the first sync; a Table source has no SQL to narrow, so its first sync would send every row before anything is checked.
+- **A model, even over a table that already has exactly these columns**: `SELECT account_id, plan, ... FROM <schema>.<table>` (on Snowflake, `SELECT account_id AS "account_id", plan AS "plan", ...`). Step 7 narrows the model to one row for the first sync; a Table source has no SQL to narrow, so its first sync would send every row before anything is checked.
 
 An account snapshot, in Snowflake:
 

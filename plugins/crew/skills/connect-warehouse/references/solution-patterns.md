@@ -29,6 +29,8 @@ The arithmetic to show the user every time: **Full** sends every row every run, 
 
 Two facts shape every pattern. The **first sync of a connection sends every row whatever the mode**, so a pattern that should start quiet needs a plan for that run. And **the sync mode, event type and user identifier of a saved connection cannot be changed**: a change means a new connection, whose first sync sends every row again.
 
+The SQL below is Snowflake's, with each alias double-quoted so it arrives in lower case (`SKILL.md` step 4). On BigQuery and Databricks drop those quotes, which make a string there.
+
 ## Pattern 1: A snapshot decided every run
 
 **Fits when the user says:** "every account should have a health tier", "renewal risk for every customer every week", "a Monday report on where each account stands". The decision's value is that it is current for everyone, including the accounts whose numbers did not move.
