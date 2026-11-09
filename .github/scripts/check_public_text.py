@@ -8,8 +8,9 @@ every file git tracks under plugins/crew/, plus the root README.md and llms.txt,
     rudder-crew, so the bare word passes; a repository path, or a pull request on it, does not;
   - a host under rudderlabs.com, which is internal, unless PUBLIC_HOSTS lists it;
   - a UUID, which reads as a workspace, Agent or person id from a real run;
-  - a pull-request reference such as #1234 or owner/repo#1234, of any length. A bare six- or
-    eight-digit number passes, since it reads as a colour such as #122633.
+  - a pull-request reference such as #1234 or owner/repo#1234, of any length, or a link to a
+    pull request's page. A bare six- or eight-digit number passes, since it reads as a colour such
+    as #122633.
 
 Run it from the repository root: python3 -I .github/scripts/check_public_text.py
 Exit code 1 on any finding, with one GitHub annotation per line found. Standard library only.
@@ -38,6 +39,9 @@ RULES = [
     ("names a pull request; say what changed instead",
      re.compile(r"\b[\w.-]+/[\w.-]+#[0-9]+\b"
                 r"|(?<![A-Za-z0-9&#])#(?:[0-9]{1,5}|[0-9]{7}|[0-9]{9,})\b")),
+    # A pull request's page, bare or as a Markdown link target.
+    ("links a pull request; say what changed instead",
+     re.compile(r"github\.com/[\w.-]+/[\w.-]+/pull/[0-9]+", re.I)),
 ]
 
 
