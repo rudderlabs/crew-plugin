@@ -111,7 +111,7 @@ The body mirrors the state as `launchMode` (`shadow` | `live`) and `isActive`. P
 - **Message instructions** are required for actions on Customer.io, CleverTap (when the campaign has authored keys), Twilio and Braze. **Slack and webhook actions are not checked**, so check them yourself: a Slack action that posts a draft for a human needs instructions as much as an email does.
 - **Send gaps** for a bound channel: Customer.io needs a Design Studio template and a complete sender; CleverTap and Braze need a campaign.
 - **Follow-up:** `gapDays` must be within `attributionWindowDays`.
-- **Enrichments** named in `enrichmentIds` must exist and be enabled, and the workspace must have Profile enrichment, a feature that is on by default (if it was switched off, the RudderStack team turns it back on). Without it, leave `enrichmentIds` out and the Agent turns on.
+- **Enrichments** named in `enrichmentIds` must exist and be enabled, and the workspace must have Profile enrichment. It is on by default; a `FORBIDDEN` "Profile enrichment is not enabled for this workspace" means it was switched off, and the RudderStack team turns it back on. Without it, leave `enrichmentIds` out and the Agent turns on.
 - **Not checked: whether the agent's tools will run.** An agent whose `agentToolNames` Shadow refuses turns on without a word. Check it yourself after the first decision ([next section](#tools-in-shadow-and-dry-runs)).
 
 ## Tools in Shadow and dry runs

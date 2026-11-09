@@ -23,8 +23,8 @@ Check these first; when one is missing, stop and tell the user what to set up.
   "People" token covers all but `webhooks_create`; an OAuth role needs `skills:write`, `users:read`,
   `users:write`, `mcp:read`, `webhooks:read` and `webhooks:write`. A tool missing from the list means
   the token lacks its permission.
-- **In the workspace:** a HeyReach channel (`channels_list`), and three workspace features. The
-  **HeyReach channel** feature lets HeyReach be connected at all, and **Profile enrichment** runs the
+- **In the workspace:** a HeyReach channel (`channels_list`), and three workspace features: the
+  HeyReach channel, Profile enrichment and the built-in web tools. The **HeyReach channel** feature lets HeyReach be connected at all, and **Profile enrichment** runs the
   research enrichments (enrichment tools answer FORBIDDEN "Profile enrichment is not enabled for this
   workspace" without it). The RudderStack team enables the HeyReach channel on request. Profile
   enrichment is on by default, so that refusal means it was switched off; the team turns it back on.
