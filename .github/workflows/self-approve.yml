@@ -1,0 +1,63 @@
+name: self-approve
+
+# A trusted member adds the `self-approve` label to a PR to say it needs no
+# eyes beyond theirs and their agent's. The bot then leaves the one approval
+# the org's `master-branch-protection` ruleset requires. Mirrors rudder-devops'
+# pr-auto-reviewer, with one difference: the gate is who APPLIED the label, not
+# the PR author, because devbox-opened PRs are authored by an App and assigned
+# to the human.
+#
+# `pull_request_target`, not `pull_request`: the workflow and its allowlist are
+# read from main, so a PR cannot edit itself onto the list. The job checks out
+# nothing and restores no cache, so no PR code runs with this token.
+#
+# `.github/CODEOWNERS` and a required code-owner review rule on main enforce
+# human review for `.github/` changes, including pushes after bot approval.
+# Approval fails closed until that native merge protection is enabled.
+on:
+  # zizmor: ignore[dangerous-triggers] -- no checkout, no PR-controlled input reaches a shell
+  pull_request_target:
+    branches: [main]
+    types: [labeled]
+
+permissions: {}
+
+jobs:
+  approve:
+    name: Approve on self-approve label
+    if: >-
+      github.event.label.name == 'self-approve'
+      && contains(fromJSON('["cisse21","psrikanth88","gouthamnc","debanjan97","1abhishekpandey","dpatchigolla"]'), github.event.sender.login)
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25 # v2.22.1
+        with:
+          egress-policy: audit
+
+      - name: Approve unless the PR touches .github/
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          SENDER: ${{ github.event.sender.login }}
+        run: |
+          set -euo pipefail
+          protected=$(gh api "repos/$REPO/rules/branches/main" \
+            --jq 'any(.[]; .type == "pull_request" and .parameters.require_code_owner_review == true)')
+          if [ "$protected" != true ]; then
+            echo "::error::Enable required code-owner reviews on main before using self-approve."
+            exit 1
+          fi
+          # The files API stops at 3000; past that a .github/ path could hide,
+          # so refuse rather than approve blind. Renames count on both sides.
+          changed=$(gh api "repos/$REPO/pulls/$PR" --jq '.changed_files')
+          files=$(gh api "repos/$REPO/pulls/$PR/files" --paginate \
+            --jq '.[] | .filename, (.previous_filename // empty)')
+          if [ "$changed" -ge 3000 ] || grep -q '^\.github/' <<<"$files"; then
+            echo "::error::Changes .github/ (or 3000+ files): self-approve does not cover it, ask for a human review."
+            exit 1
+          fi
+          gh pr review "$PR" -R "$REPO" --approve \
+            --body "Self-approved by @$SENDER via the \`self-approve\` label."
