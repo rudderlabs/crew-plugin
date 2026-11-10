@@ -1,1 +1,3 @@
-* @cisse21 @dpatchigolla
+# Required code-owner reviews on main keep bot approvals from authorizing
+# workflow and allowlist changes. Owners must retain write access to the repo.
+/.github/ @cisse21 @psrikanth88 @gouthamnc @debanjan97 @1abhishekpandey @dpatchigolla

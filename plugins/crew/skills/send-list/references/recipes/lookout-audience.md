@@ -56,7 +56,7 @@ SELECT COUNT(*) AS members FROM <from> u WHERE <filter> LIMIT 1
 
 The count should be close to `count.members`. It drifts as the data changes: in one check, a large audience Lookout had counted a week earlier was off by under 1%, and a small one counted five weeks earlier by about 8%. A gap far bigger than the time since `counted_at` explains means the SQL is wrong; fix it before you go on. Tell the user both numbers.
 
-If the count is more than a few hundred, ask the user how to narrow it (a ranking and a top N, or a segment), or move to [../recurring-sync.md](../recurring-sync.md). Then fetch. `query_warehouse` refuses a query without a literal `LIMIT`:
+If the count is more than a few hundred, ask the user how to narrow it (a ranking and a top N, or a segment), or move to a scheduled Reverse ETL sync (the `connect-warehouse` skill), with this recipe's query as its model. Then fetch. `query_warehouse` refuses a query without a literal `LIMIT`:
 
 ```sql
 SELECT u.EMAIL AS email,

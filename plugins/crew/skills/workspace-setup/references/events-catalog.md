@@ -60,7 +60,7 @@ Four paths, in the order a new workspace usually needs them. Choose by purpose: 
 | **Dry run** with `preview_tryEvent`                     | Claude                                                                        | Decisions and drafts on events Claude writes, in one call, with no webhook and no decision stored                                 |
 | **Pasted catalog** on the Events page (upload or paste) | The user, in the app                                                          | Descriptions before any event arrives; marked as file-sourced, and they outrank AI-drafted ones. Catalog import is not on the MCP |
 | **Test events through a webhook**                       | Claude, with `webhooks_create` and `scripts/send_events.py`                   | Real Shadow decisions, people under Users, and a catalog built from what arrived                                                  |
-| **Real events** from the customer's RudderStack         | The user adds a Webhook destination; the `connect-rudderstack` skill walks it | Live traffic. Warehouse rows go through Reverse ETL: the `send-list` skill's `references/recurring-sync.md`                       |
+| **Real events** from the customer's RudderStack         | The user adds a Webhook destination; the `connect-rudderstack` skill walks it | Live traffic. Warehouse rows go through Reverse ETL: the `connect-warehouse` skill                                                |
 
 There is no ingest tool on the Crew MCP, but `webhooks_create` returns the webhook's URL and bearer token, so Claude can post events itself. `catalog_list` reads back what the workspace has actually received: it is the check that events arrived and the source of exact names for triggers.
 

@@ -129,3 +129,20 @@ jobs:
       # Private repository names, internal hosts, UUIDs and PR numbers in what customers read.
       - name: Check the public text
         run: python3 -I .github/scripts/check_public_text.py
+
+  self-approve:
+    name: self-approve guard tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Harden the runner (audit egress)
+        uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25 # v2.22.1
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Test self-approval guards
+        run: bash .github/scripts/test-self-approve.sh

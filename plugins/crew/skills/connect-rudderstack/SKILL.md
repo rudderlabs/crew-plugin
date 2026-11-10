@@ -135,4 +135,4 @@ The retry behaviour is RudderStack's documented policy for cloud destinations (r
 
 ## Warehouse rows
 
-Rows from a warehouse table (accounts, a lead list, a daily snapshot) go through Reverse ETL into a Webhook destination: the `send-list` skill's `references/recurring-sync.md`. Give them their own Crew webhook. An Agent that decides per account reads `workspace-setup`'s `references/account-agents.md`.
+Rows from a warehouse table (accounts, a lead list, a daily snapshot) go through Reverse ETL into their own Webhook destination and their own Crew webhook: the `connect-warehouse` skill. An Agent that decides per account reads `workspace-setup`'s `references/account-agents.md`.

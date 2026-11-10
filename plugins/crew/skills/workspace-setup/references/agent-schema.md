@@ -111,7 +111,7 @@ The body mirrors the state as `launchMode` (`shadow` | `live`) and `isActive`. P
 - **Message instructions** are required for actions on Customer.io, CleverTap (when the campaign has authored keys), Twilio and Braze. **Slack and webhook actions are not checked**, so check them yourself: a Slack action that posts a draft for a human needs instructions as much as an email does.
 - **Send gaps** for a bound channel: Customer.io needs a Design Studio template and a complete sender; CleverTap and Braze need a campaign.
 - **Follow-up:** `gapDays` must be within `attributionWindowDays`.
-- **Enrichments** named in `enrichmentIds` must exist and be enabled, and the workspace must have Profile enrichment, a feature the RudderStack team enables on request. Without it, leave `enrichmentIds` out and the Agent turns on.
+- **Enrichments** named in `enrichmentIds` must exist and be enabled, and the workspace must have Profile enrichment. It is on by default; a `FORBIDDEN` "Profile enrichment is not enabled for this workspace" means it was switched off, and the RudderStack team turns it back on. Without it, leave `enrichmentIds` out and the Agent turns on.
 - **Not checked: whether the agent's tools will run.** An agent whose `agentToolNames` Shadow refuses turns on without a word. Check it yourself after the first decision ([next section](#tools-in-shadow-and-dry-runs)).
 
 ## Tools in Shadow and dry runs
@@ -157,7 +157,7 @@ Why an enrichment is the right home for it:
 - Its result is in the snapshot the decider, the writer and the judge all read, so its facts are on the record. A fact a tool found in Observe isn't, until a signal restates it.
 - It is cached per person and shared by every agent that names it.
 
-The definition that worked, with the brand and topic as placeholders. Creating it needs `skills:write` and the workspace's Profile enrichment feature (the RudderStack team enables it on request); previewing it also needs `users:read`:
+The definition that worked, with the brand and topic as placeholders. Creating it needs `skills:write` and the workspace's Profile enrichment feature (on by default); previewing it also needs `users:read`:
 
 ```json
 {

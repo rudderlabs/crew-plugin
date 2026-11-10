@@ -161,9 +161,15 @@ Offer the three ways on:
   events and the cards that still differ.
 - **Publish to Shadow**: first read the overview's `unappliedAnswerCount`. Above 0, some answers came
   after the last Apply and the version would leave them out; publishing closes the round, so offer
-  to apply first and wait for it. Then confirm with the user and call `calibrate_publish` with
+  to apply first and wait for it. When `agentStatus` is `off`, the publish turns the Agent on, so
+  first tell the user how often its trigger fires (`catalog_list` counts) and that every match is one
+  model decision. On a busy trigger, offer two ways on: narrow it first with a condition (`when`)
+  saved to the working copy, show the user the changed trigger, and publish; or stop here, and the
+  working copy keeps every applied change for later. Then confirm with the user and call
+  `calibrate_publish` with
   `target: 'shadow'`, `expectedStatus` from eligibility's `agentStatus`, and `expectedDraftRevision`
-  from the latest overview's `draft.currentRevision` (an Apply moves it). An Off Agent starts
+  from the latest overview's `draft.currentRevision`. An Apply or a save moves it, so read the
+  overview again after either; a stale revision is refused. An Off Agent starts
   running in Shadow (it decides on real users and sends nothing); a Shadow Agent gets the new
   version. A Live Agent is refused over MCP: send the user to the Crew editor to publish, and never
   stop the Agent to get around it.
