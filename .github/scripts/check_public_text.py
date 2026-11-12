@@ -8,9 +8,10 @@ every file git tracks under plugins/crew/, plus the root README.md and llms.txt,
     rudder-crew, so the bare word passes; a repository path, or a pull request on it, does not;
   - a host under rudderlabs.com, which is internal, unless PUBLIC_HOSTS lists it;
   - a UUID, which reads as a workspace, Agent or person id from a real run;
-  - a pull-request reference such as #1234 or owner/repo#1234, of any length, or a link to a
+  - a pull-request reference such as #1234, PR#12 or owner/repo#1234, of any length, or a link to a
     pull request's page. A bare six- or eight-digit number passes, since it reads as a colour such
-    as #122633.
+    as #122633, and so does any bare number in a .css file or an HTML <style> block, where #333 is
+    a colour too.
 
 Run it from the repository root: python3 -I .github/scripts/check_public_text.py
 Exit code 1 on any finding, with one GitHub annotation per line found. Standard library only.
@@ -27,22 +28,24 @@ PATHS = ["plugins/crew", "README.md", "llms.txt"]
 PUBLIC_HOSTS = set()
 
 HOST = re.compile(r"\b(?:[a-z0-9-]+\.)+rudderlabs\.com\b", re.I)
+PR_MESSAGE = "names a pull request; say what changed instead"
 RULES = [
     ("names the private product repository; describe the behaviour instead",
      re.compile(r"rudderlabs/rudder-crew\b|rudder-crew[#/]|rudder-claw", re.I)),
     ("names a UUID, which reads as an id from a real workspace; use a <placeholder>",
      re.compile(r"\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b", re.I)),
-    # A pull request qualified by its repository (owner/repo#123456), at any length, or a bare one
-    # (#1234) at any length but six or eight digits, which read as an all-digit colour (#122633).
-    # An HTML entity (&#123;), a heading marker (##) and a word run into a # (step#2) are not
-    # references.
-    ("names a pull request; say what changed instead",
-     re.compile(r"\b[\w.-]+/[\w.-]+#[0-9]+\b"
-                r"|(?<![A-Za-z0-9&#])#(?:[0-9]{1,5}|[0-9]{7}|[0-9]{9,})\b")),
+    # A pull request qualified by its repository (owner/repo#123456) or named as one (PR#12,
+    # PR #123456), at any length.
+    (PR_MESSAGE,
+     re.compile(r"\b[\w.-]+/[\w.-]+#[0-9]+\b|\b(?i:PR)\s*#[0-9]+\b")),
     # A pull request's page, bare or as a Markdown link target.
     ("links a pull request; say what changed instead",
      re.compile(r"github\.com/[\w.-]+/[\w.-]+/pull/[0-9]+", re.I)),
 ]
+# A bare pull request (#1234), at any length but six or eight digits, which read as an all-digit
+# colour (#122633). An HTML entity (&#123;), a heading marker (##) and any other word run into a #
+# (step#2) are not references. Not applied to CSS, where #333 and #0008 are colours.
+BARE_PR = re.compile(r"(?<![A-Za-z0-9&#])#(?:[0-9]{1,5}|[0-9]{7}|[0-9]{9,})\b")
 
 
 def tracked():
@@ -51,6 +54,9 @@ def tracked():
 
 
 def findings(path, text):
+    css_file = path.lower().endswith(".css")
+    html_file = path.lower().endswith((".html", ".htm"))
+    in_style = False
     for n, line in enumerate(text.splitlines(), start=1):
         for host in (m.group(0) for m in HOST.finditer(line)):
             if host.lower() not in PUBLIC_HOSTS:
@@ -59,19 +65,46 @@ def findings(path, text):
             match = rule.search(line)
             if match:
                 yield n, f"{message} ({match.group(0)})"
+        css_line = css_file or in_style
+        if html_file:
+            lower = line.lower()
+            opens, closes = lower.rfind("<style"), lower.rfind("</style")
+            css_line = css_line or opens != -1
+            if opens > closes:
+                in_style = True
+            elif closes != -1:
+                in_style = False
+        if not css_line:
+            match = BARE_PR.search(line)
+            if match:
+                yield n, f"{PR_MESSAGE} ({match.group(0)})"
+
+
+def annotation_property(value):
+    """Escape a workflow-command property, so a file name cannot end or extend the command."""
+    return (value.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+            .replace(":", "%3A").replace(",", "%2C"))
+
+
+def annotation_message(value):
+    return value.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
 
 
 def main():
     problems = 0
     for path in tracked():
         try:
-            with open(path, encoding="utf-8") as f:
-                text = f.read()
-        except (UnicodeDecodeError, IsADirectoryError):
+            with open(path, "rb") as f:
+                data = f.read()
+        except IsADirectoryError:
+            continue
+        if b"\0" in data:
             continue  # a binary file: nothing a reader sees as text
+        # A stray byte that is not UTF-8 must not hide the rest of the file from the check.
+        text = data.decode("utf-8", errors="replace")
         for n, message in findings(path, text):
             problems += 1
-            print(f"::error file={path},line={n}::{message}")
+            print(f"::error file={annotation_property(path)},line={n}::{annotation_message(message)}")
             print(f"{path}:{n}: {message}", file=sys.stderr)
     if problems:
         print(f"{problems} finding(s) name something private. This repository is public: see "
