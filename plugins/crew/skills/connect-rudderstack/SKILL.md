@@ -47,11 +47,7 @@ The RudderStack MCP comes with RudderStack's `rudder-core` plugin (`/plugin mark
 - `get_source_event_metrics` and `get_source_event_schemas`: the real event names, their volumes and their property paths. These become the Agent's trigger names, character for character.
 - `list_connections`, then `get_destination` on any Webhook destination: one whose URL is already a Crew webhook's means a connection exists. Repair that one (step 6) rather than adding a second.
 
-**Check what Crew will refuse, before anything flows.** A Crew webhook answers these with a 400, and RudderStack drops a 400 or 401 without retrying, so each such event is lost for good (`workspace-setup`'s `references/events-catalog.md` → "Events Crew refuses"):
-
-- an event name with a character other than letters, digits, spaces and `_ : . / -`;
-- a `userId` that is a number, which some backend SDKs send;
-- an `originalTimestamp` with no time zone.
+**Check what Crew will refuse, before anything flows.** A Crew webhook answers some calls with a 400, and RudderStack drops a 400 or 401 without retrying, so each such event is lost for good. Check the source's event names, `userId` types and timestamps against `workspace-setup`'s `references/events-catalog.md` → "Events Crew refuses". The ones a RudderStack source sends are an event name with a character Crew refuses, a `userId` that is a number (some backend SDKs send one), and an `originalTimestamp` with no time zone.
 
 List the offending event names and sources for the user. If there are any, the filter (step 4) must be attached before any event flows.
 

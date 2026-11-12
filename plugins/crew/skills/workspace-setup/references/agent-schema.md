@@ -83,7 +83,7 @@ The chain from Decide to Act is: an **option** (`actId`) → an **act** → the 
 
 ## Runtime state, drafts and publishing
 
-An agent's runtime state is one value on the agent row: **Off**, **Shadow** or **Live**.
+An agent's runtime state is one value on the agent row: **Off**, **Shadow** or **Live**. This section is the plugin's one statement of it; other skills link here.
 
 - `off` — not evaluating. `agent_create` always creates the agent Off, and an Off body is parsed leniently, so a half-built agent saves. Over MCP the server stores the created agent's mode as Shadow whatever the body says (the `neverLive` pin), so resuming it from the Agents list starts it in Shadow; going Live is a human step in the editor. Send `launchMode: "shadow"` anyway, so the body says what it will run as.
 - `shadow` — decides on real events, every send suppressed, **Slack posts included**. Drafts are reviewed on the Decisions page, not in the Slack channel the action targets; tell the user so when the action is a Slack post for a human to review. Tools that don't classify as reads are refused too, so a Shadow decision can rest on less than a Live one would ([below](#tools-in-shadow-and-dry-runs)). Reached with `agent_update { skillId, version, status: "shadow" }`; that call carries no body.
@@ -95,7 +95,9 @@ The body mirrors the state as `launchMode` (`shadow` | `live`) and `isActive`. P
 
 **The working copy may be the user's.** A published Agent has one working copy, the one the app's editor shows, and `draft_save` replaces it whole; `draft_getForSkill` shows whether one exists. If the user is editing the Agent in the app, don't save to it: copy the Agent into a separate working copy with `draft_createFromSkill`, dry-run that copy by its `draftId`, and give the user the changed fields to paste. Never `draft_publish` the copy, which would make it a new Agent; `draft_discard` it when done.
 
-**Publishing over MCP.** `draft_publish` publishes a draft for an agent that isn't Live. After a publish, read the Agent back with `agent_get` and check that `body.version` went up before telling the user it is published: a refused call can look like a finished one. An older server may not have it, so check `tools/list` on the server you are using. Where it is missing, there is one other MCP-only way to ship a body: `agent_create` stores the body it is given as the published version 1, and the agent lands Off. So a new body can go out as a fresh agent: create it, read it back, run `check_body.py`, move it to Shadow with `agent_update`, and turn the agent it replaces Off. Two things to know:
+**Publishing over MCP.** `draft_publish` publishes a draft for an agent that isn't Live. After a publish, read the Agent back with `agent_get` and check that `body.version` went up before telling the user it is published: a refused call can look like a finished one.
+
+**`agent_create` stores the body it is given as the published version 1**, Off, as above. Two things to know when a body goes out as a fresh agent:
 
 - **Action ids another agent already uses are re-minted.** In one workspace, `<brand>_welcome_email` came back as `welcome_email_<brand>s`. Both halves (the policy and its `availableActions[]` entry) get the same new id, so nothing is orphaned, but anything that scripts against the old id breaks. Read the ids from the read-back.
 - **It is a new agent, not a new version.** It starts with no decisions, no history and its own Decisions filter. For a change to an agent already running, publish its draft instead.
@@ -108,10 +110,10 @@ The body mirrors the state as `launchMode` (`shadow` | `live`) and `isActive`. P
 
 - **Every option links to an act** (`options[].actId` names an existing `acts[].id`), and **every act owns at least one action**.
 - **Channel binding.** Shadow accepts a bare `channelType` (a cold start, no channel picked yet). Live needs a real 27-character `channelId` on every action and rejects `channelType`. So Shadow → Live can be refused; Live → Shadow never is.
-- **Message instructions** are required for actions on Customer.io, CleverTap (when the campaign has authored keys), Twilio and Braze. **Slack and webhook actions are not checked**, so check them yourself: a Slack action that posts a draft for a human needs instructions as much as an email does.
+- **Message instructions** are required for actions on the channel types `agent_bodySchema`'s invariants list: Customer.io, CleverTap (when the campaign has authored keys), Twilio, Braze, HeyReach and email. The invariants are the live answer; this is the plugin's one copy of the list, and other files link here. **Slack and webhook actions are not checked**, so check them yourself: a Slack action that posts a draft for a human needs instructions as much as an email does.
 - **Send gaps** for a bound channel: Customer.io needs a Design Studio template and a complete sender; CleverTap and Braze need a campaign.
 - **Follow-up:** `gapDays` must be within `attributionWindowDays`.
-- **Enrichments** named in `enrichmentIds` must exist and be enabled, and the workspace must have Profile enrichment. It is on by default; a `FORBIDDEN` "Profile enrichment is not enabled for this workspace" means it was switched off, and the RudderStack team turns it back on. Without it, leave `enrichmentIds` out and the Agent turns on.
+- **Enrichments** named in `enrichmentIds` must exist and be enabled, and the workspace must have Profile enrichment ([Workspace features](../../../README.md#workspace-features)): a `FORBIDDEN` "Profile enrichment is not enabled for this workspace" means it is off here. Without it, leave `enrichmentIds` out and the Agent turns on.
 - **Not checked: whether the agent's tools will run.** An agent whose `agentToolNames` Shadow refuses turns on without a word. Check it yourself after the first decision ([next section](#tools-in-shadow-and-dry-runs)).
 
 ## Tools in Shadow and dry runs
@@ -157,7 +159,7 @@ Why an enrichment is the right home for it:
 - Its result is in the snapshot the decider, the writer and the judge all read, so its facts are on the record. A fact a tool found in Observe isn't, until a signal restates it.
 - It is cached per person and shared by every agent that names it.
 
-The definition that worked, with the brand and topic as placeholders. Creating it needs `skills:write` and the workspace's Profile enrichment feature (on by default); previewing it also needs `users:read`:
+The definition that worked, with the brand and topic as placeholders. Creating it needs `skills:write` and the workspace's Profile enrichment feature ([Workspace features](../../../README.md#workspace-features)); previewing it also needs `users:read`:
 
 ```json
 {

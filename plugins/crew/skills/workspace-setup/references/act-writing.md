@@ -21,7 +21,7 @@ Every action that puts words in front of a person needs **message instructions**
 
 Three facts about the harness decide this:
 
-1. **No instructions, no message.** For an action with no `payloadTemplate`, content generation is skipped entirely. Turning the agent on only demands instructions for Customer.io, CleverTap, Twilio and Braze, so an empty Slack or webhook box fails silently.
+1. **No instructions, no message.** For an action with no `payloadTemplate`, content generation is skipped entirely. Turning the agent on demands instructions only for some channel types, never Slack or webhook (`agent-schema.md` → "What turning an agent on checks"), so an empty Slack or webhook box fails silently.
 2. **The writer has almost no style guidance of its own.** Its system prompt says, in effect, "you are a content generator, fill these fields as JSON", plus one line of channel tone for some channels (none for Slack or webhook) and the agent's `brandVoice` if set. Left alone, a model writes in its default register: a compliment, a recap, a benefits paragraph, a call request. That is what reads as AI.
 3. **The judge (Content check) won't catch it.** It blocks on hard constraints and invented facts. Brand voice is checked only as advisory notes that never change the verdict, and style problems alone are explicitly not a reason to block. There is no second pass that rewrites a weak draft.
 

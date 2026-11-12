@@ -138,7 +138,7 @@ spec:
   definition_version: 1
   enabled: true
   config:
-    webhook_url: https://<the RudderCrew host>/webhook/<webhookId>/events
+    webhook_url: <CREW_WEBHOOK_URL from the webhook's file>
     webhook_method: POST
     headers:
       - from: Authorization

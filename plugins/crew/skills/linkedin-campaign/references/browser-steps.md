@@ -10,10 +10,11 @@ Use the browser on the user's Crew UI (their Crew URL); the user signs in first.
 
 1. Settings → Integrations → **Webhooks** card → **New webhook**. Name `<Launch> leads (custom)`,
    Payload format **Custom**.
-2. **Stop before Create webhook.** The user clicks it and puts the URL and token into
-   `<launch>/crew-webhooks.env` as `CREW_CUSTOM_WEBHOOK_URL` and `CREW_CUSTOM_WEBHOOK_TOKEN` (SKILL.md
-   step 6). Never read the token off the screen: a screenshot puts it in the transcript.
-3. Check with `webhooks_list` and compare the id inside the shell, without printing it.
+2. **Stop before Create webhook.** The user clicks it and puts the URL and token into the webhook's
+   own file, `~/crew-lists/webhooks/<webhookId>.env`, as `CREW_WEBHOOK_URL` and `CREW_WEBHOOK_TOKEN`
+   (SKILL.md step 6). Never read the token off the screen: a screenshot puts it in the transcript.
+3. Check with `webhooks_list` that the webhook is listed, and that its file exists (`test -s`),
+   without printing it.
 
 ## Map it (a webhook created in the UI, or changing an existing mapping)
 
