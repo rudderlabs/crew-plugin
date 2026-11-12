@@ -53,10 +53,34 @@ def tracked():
     return [p for p in out.decode().split("\0") if p]
 
 
+STYLE_ELEMENT = re.compile(r"<style\b[^>]*>.*?</style\s*>", re.I | re.S)
+HTML_COMMENT = re.compile(r"<!--.*?-->", re.S)
+
+
+def blanked(text, pattern, within=None):
+    """The text with every match of pattern (searched in `within`, the same length) turned to
+    spaces, line breaks kept, so positions and line numbers still line up."""
+    chars = list(text)
+    for match in pattern.finditer(text if within is None else within):
+        for i in range(*match.span()):
+            if not chars[i].isspace():
+                chars[i] = " "
+    return "".join(chars)
+
+
+def outside_css(path, text):
+    """What the bare #N rule reads: nothing of a .css file, an HTML file without its <style>
+    elements (a <style> inside an HTML comment opens none), any other file whole."""
+    lower = path.lower()
+    if lower.endswith(".css"):
+        return blanked(text, re.compile(r".+"))
+    if lower.endswith((".html", ".htm")):
+        return blanked(text, STYLE_ELEMENT, within=blanked(text, HTML_COMMENT))
+    return text
+
+
 def findings(path, text):
-    css_file = path.lower().endswith(".css")
-    html_file = path.lower().endswith((".html", ".htm"))
-    in_style = False
+    bare_lines = outside_css(path, text).splitlines()
     for n, line in enumerate(text.splitlines(), start=1):
         for host in (m.group(0) for m in HOST.finditer(line)):
             if host.lower() not in PUBLIC_HOSTS:
@@ -65,19 +89,9 @@ def findings(path, text):
             match = rule.search(line)
             if match:
                 yield n, f"{message} ({match.group(0)})"
-        css_line = css_file or in_style
-        if html_file:
-            lower = line.lower()
-            opens, closes = lower.rfind("<style"), lower.rfind("</style")
-            css_line = css_line or opens != -1
-            if opens > closes:
-                in_style = True
-            elif closes != -1:
-                in_style = False
-        if not css_line:
-            match = BARE_PR.search(line)
-            if match:
-                yield n, f"{PR_MESSAGE} ({match.group(0)})"
+        match = BARE_PR.search(bare_lines[n - 1])
+        if match:
+            yield n, f"{PR_MESSAGE} ({match.group(0)})"
 
 
 def annotation_property(value):
