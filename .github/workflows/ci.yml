@@ -67,6 +67,69 @@ jobs:
           "$GITHUB_WORKSPACE/.github/ci/node_modules/.bin/claude" --version
           "$GITHUB_WORKSPACE/.github/ci/node_modules/.bin/claude" plugin validate plugins/crew
 
+  version:
+    name: plugin version bumped
+    # A pull request that changes the plugin must bump its version, or `claude plugin update`
+    # leaves every install on the old files.
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Harden the runner (audit egress)
+        uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25 # v2.22.1
+        with:
+          egress-policy: audit
+
+      # The pull request's merge commit and its first parent, the base branch as it is now.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+
+      - name: Check plugin.json's version moved up
+        run: |
+          manifest=plugins/crew/.claude-plugin/plugin.json
+          if git diff --quiet HEAD^1 HEAD -- plugins/crew; then
+            echo "Nothing under plugins/crew changed."
+            exit 0
+          fi
+          base=$(git show "HEAD^1:$manifest" | jq -r .version)
+          head=$(git show "HEAD:$manifest" | jq -r .version)
+          # A plain MAJOR.MINOR.PATCH release, no leading zeros: a pre-release, build tag or missing
+          # version cannot be ordered against the base by a numeric comparison.
+          triplet='^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'
+          for v in "$base" "$head"; do
+            if ! [[ "$v" =~ $triplet ]]; then
+              echo "::error file=$manifest::version \"$v\" is not MAJOR.MINOR.PATCH (for example 0.8.1)."
+              exit 1
+            fi
+          done
+          IFS=. read -r b1 b2 b3 <<< "$base"
+          IFS=. read -r h1 h2 h3 <<< "$head"
+          if ! (( h1 > b1 || (h1 == b1 && (h2 > b2 || (h2 == b2 && h3 > b3))) )); then
+            echo "::error file=$manifest::plugins/crew changed, but version is $head against the base branch's $base. Bump it above $base: a patch for wording, a minor for a new skill."
+            exit 1
+          fi
+          echo "version $base -> $head"
+
+  public-text:
+    name: public text
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Harden the runner (audit egress)
+        uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25 # v2.22.1
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Private repository names, internal hosts, UUIDs and PR numbers in what customers read.
+      - name: Check the public text
+        run: python3 -I .github/scripts/check_public_text.py
+
   self-approve:
     name: self-approve guard tests
     runs-on: ubuntu-latest
