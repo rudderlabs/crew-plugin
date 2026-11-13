@@ -88,6 +88,9 @@ never when to use it. For View profile:
 }
 ```
 
+On a managed channel the campaign already exists: set `heyreachCampaign` to the `bind.fields.heyreachCampaign` of the
+matching item from `channels_resources` (View profile, Follow or Like a recent post) instead of writing it.
+
 These merge into `decisionLogic.acts`, `decisionLogic.options`, `decisionLogic.actionPolicies` and
 `availableActions`. Follow and Like follow the same pattern. Add the move to the "Where things stand"
 signal too ("have we already viewed, followed or liked?"), since HeyReach reports nothing back about

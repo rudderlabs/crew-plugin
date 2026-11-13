@@ -22,7 +22,7 @@ The plugin also connects the Crew MCP server (`https://crew.rudderstack.com/mcp`
 
 - **A Crew workspace you can sign in to.** Crew is invite-only today: the RudderStack team sets up the workspace and invites you, and there is no self sign-up. Without an invite the plugin installs, but the sign-in finds no workspace: ask your RudderStack contact first. Your role in the workspace decides what Claude can do.
 - **Workspace features.** Some skills use a feature switched per workspace, such as Profile enrichment (research about a person or company) or the HeyReach channel (the LinkedIn skills). [Workspace features](plugins/crew/README.md#workspace-features) lists each one, whether a new workspace has it, and who changes it. When one is off, the skill that needs it says what to ask for and carries on without it.
-- **Python 3.8 or later, run as `python3`,** for the skills' scripts and the hook. On Windows, check that `python3 --version` works in the shell Claude Code uses.
+- **Python 3.8 or later, only once a step runs one of the skills' scripts** (sending a list or test events, finding leads). Claude checks for it at that step, as `python3`, or `py -3` on Windows, and nothing before then needs it. The body-check hook runs `python3`: on Windows it reports nothing until `python3 --version` works in the shell Claude Code uses.
 - **No channels to start.** Shadow needs none. Connect channels in the Crew app before an Agent goes Live.
 
 ## Install
@@ -80,7 +80,7 @@ Without a GitHub SSH key, the first line is followed by `SSH clone failed, retry
 
 **Sign in.** Run `/mcp`, pick `plugin:crew:crew`, then **Authenticate**. The browser sign-in picks your Crew workspace, and one sign-in reaches one workspace. Then ask Claude "which Crew workspace am I connected to?": it should name yours.
 
-**Your RudderStack data (recommended).** To let Claude read your RudderStack sources, event volumes and live events, also install RudderStack's own plugin, then sign in to `plugin:rudder-core:rudderstack` the same way:
+**Your RudderStack data (when your events are in RudderStack).** To let Claude read your RudderStack sources, event volumes and live events, also install RudderStack's own plugin, then sign in to `plugin:rudder-core:rudderstack` the same way:
 
 ```
 /plugin marketplace add rudderlabs/rudder-agent-skills
@@ -128,15 +128,17 @@ Restart Claude Code (or run `/reload-plugins`) after an update.
 | `403 insufficient_scope`                                                    | Your role in that workspace holds none of the permissions the tools need. A workspace admin changes it in Crew under Settings → Members.                                                                                                                 |
 | `FORBIDDEN: Missing permission: <slug>`                                     | That one step needs a role with that permission. Everything else still works.                                                                                                                                                                            |
 | `Profile enrichment is not enabled for this workspace`                      | This workspace has Profile enrichment off. [Workspace features](plugins/crew/README.md#workspace-features) says who turns it on; the skill carries on without it.                                                                                        |
-| `python3: command not found`, or a script fails on an older Python          | Install Python 3.8 or later.                                                                                                                                                                                                                             |
+| `python3: command not found`, or a script fails on an older Python | Install Python 3.8 or later. On Windows try `py -3 --version` first: when it answers, Claude runs the scripts with `py -3`. |
 | Connected to the wrong workspace                                            | Clear the Crew server's authentication in `/mcp`, then sign in again.                                                                                                                                                                                    |
 | The Decisions page is empty after the Agent went to Shadow                  | Shadow decides only on trigger events that arrive after it is on. Test events sent while the Agent was Off are not replayed, and Crew ignores a repeat of the same send: ask Claude to send them again under a new `--run` label, or wait for real ones. |
-| A script fails, or the body check never reports, on Windows                 | Both run `python3`. Python from python.org often installs only `python` and `py`; make `python3 --version` work in the shell Claude Code uses.                                                                                                           |
+| The body check never reports, on Windows | The hook runs `python3` only. Python from python.org often installs only `python` and `py`; make `python3 --version` work in the shell Claude Code uses. |
+| Claude says LinkedIn or the HeyReach channel is not enabled | The Crew MCP cannot see that feature. Open Channels in the Crew app and start a new HeyReach channel: if "LinkedIn account" is offered, connect your LinkedIn there. Only if it is not offered, ask your RudderStack contact to turn it on. |
 
 ## What's in this repo
 
 ```
 .claude-plugin/marketplace.json   the rudder-crew marketplace, listing one plugin: crew
+CLAUDE.md                         how to write anything public here: files, commits, pull requests
 llms.txt                          the one-line setup, written for an agent to follow
 plugins/crew/                     the plugin: skills, the Crew MCP connection, the body-check hook
 plugins/crew/evals/               eval cases, run with: claude plugin eval plugins/crew

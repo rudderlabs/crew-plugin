@@ -1,7 +1,7 @@
 ---
 name: linkedin-campaign
-description: Runs a LinkedIn outbound campaign end to end with Crew - finds and verifies real leads with treg, creates the launch's HeyReach campaigns through the HeyReach MCP, gives each lead a LinkedIn member id so Crew research enrichments can personalise, then builds, dry-runs and Shadows one Crew Agent over HeyReach through the linkedin-outreach skill. Use when someone wants to launch or simulate a LinkedIn campaign for a product or launch, find leads for Crew outreach, or set up research enrichments on LinkedIn-only leads.
-compatibility: Claude Code with a shell, Python 3 and jq; the Crew MCP on the user's workspace; the sibling skills linkedin-outreach and send-list; treg for leads; a HeyReach MCP or API key for campaigns.
+description: Runs a LinkedIn outbound campaign end to end with Crew - finds and verifies real leads with treg, creates the launch's HeyReach campaigns through the HeyReach MCP, gives each lead a LinkedIn member id so Crew research enrichments can personalise, then builds, dry-runs and Shadows one Crew Agent over HeyReach through the linkedin-outreach skill. Use when someone wants Crew to find the leads for a LinkedIn campaign for a product or launch, or to set up research enrichments on LinkedIn-only leads. When they already have the people (a CSV, a CRM export, their own connections or warm contacts), use linkedin-outreach instead, even when they call it lead generation.
+compatibility: Claude Code with a shell; the Crew MCP on the user's workspace; the sibling skills linkedin-outreach and send-list; a HeyReach MCP or API key for campaigns. Only once it finds leads (step 2), and checked then: Python 3, jq and treg.
 ---
 
 # LinkedIn campaign with Crew
@@ -10,13 +10,20 @@ Four pieces: **treg** for leads, the **HeyReach MCP** for campaigns, the **Crew 
 it exposes, and the sibling skill **linkedin-outreach** for the Agent itself. This skill adds
 the steps before it and one in the middle. It works on any Crew workspace.
 
+**First: a list, or a search?** This skill is for Crew finding the leads. If the user already has
+the people (a CSV, a CRM export, their own connections or warm contacts), stop here and load
+`linkedin-outreach`: it builds the same Agent from their list and needs no treg or jq. When the
+request doesn't say which, ask that one question before checking or installing anything.
+
 ## Before you start
 
-Check these first; when one is missing, stop and tell the user what to set up.
+Check these once the user has confirmed that Crew finds the leads; when one is missing, stop and
+tell the user what to set up. What only the lead search needs (Python 3, `jq`, treg) is checked at
+step 2, not here.
 
-- **Claude Code with a shell, Python 3 and `jq`.** `<scripts>` is this skill's `scripts/` folder,
+- **Claude Code with a shell.** `<scripts>` is this skill's `scripts/` folder,
   `<outreach>` is linkedin-outreach's folder and `<send-list>` is send-list's; run each script by
-  absolute path with `python3 -I`.
+  absolute path with `python3 -I` (on Windows often `py -3 -I`: `workspace-setup` → "Scripts").
 - **linkedin-outreach and send-list next to this skill** (same parent folder; the crew plugin installs
   all three). Load linkedin-outreach with the Skill tool, or read `../linkedin-outreach/SKILL.md` from
   this skill's folder.
@@ -25,8 +32,11 @@ Check these first; when one is missing, stop and tell the user what to set up.
   "People" token covers all but `webhooks_create`; an OAuth role needs `skills:write`, `users:read`,
   `users:write`, `mcp:read`, `webhooks:read` and `webhooks:write`. A tool missing from the list means
   the token lacks its permission.
-- **In the workspace:** a HeyReach channel (`channels_list`), and three workspace features: the
-  **HeyReach channel**, which lets HeyReach be connected at all; **Profile enrichment**, which runs
+- **In the workspace:** a HeyReach channel (`channels_list`). With none, the user connects their
+  LinkedIn account as `linkedin-outreach` → "Only a human can do these" says (Crew then runs
+  HeyReach and makes the campaigns). Three workspace features: the **HeyReach channel** with its
+  LinkedIn account method, assumed on (the Crew MCP cannot read it, so never call it off on a
+  guess; ask RudderStack only when the Channels page offers no LinkedIn account); **Profile enrichment**, which runs
   the research enrichments; and the **built-in web tools** (`web_search`, `web_fetch`), which they
   search with. [Workspace features](../../README.md#workspace-features) says whether a new workspace
   has each, who changes it, and how to tell. When one is missing, tell the user what to ask for and
@@ -35,11 +45,13 @@ Check these first; when one is missing, stop and tell the user what to set up.
   only feeds it: the custom identity webhook in step 6 (create or reuse only the lead webhook), steps
   7 and 9, `enrichmentIds` in step 8, and the research table in step 10. Step 3's member ids are then
   not needed.
-- **treg** (CLI and MCP) signed in with some balance. Without it the user brings `leads.csv`, step 3
-  cannot fetch member ids, and research enrichments are skipped.
-- **The HeyReach MCP** for step 5, or the team's HeyReach API key in `<launch>/heyreach.env`
-  (`HEYREACH_API_KEY=`, put there by the user, never pasted into chat). Without either, the user
-  creates the campaigns from your plan.
+- **treg** (CLI and MCP) signed in with some balance, and `jq`: checked when step 2 starts, never
+  installed before. Without treg the user brings `leads.csv` (and `linkedin-outreach` is then the
+  shorter path), step 3 cannot fetch member ids, and research enrichments are skipped.
+- **Only with the team's own HeyReach** (`auth_method: "api_key"`): the HeyReach MCP for step 5,
+  or the team's HeyReach API key in `<launch>/heyreach.env` (`HEYREACH_API_KEY=`, put there by the
+  user, never pasted into chat). Without either, the user creates the campaigns from your plan. A
+  managed channel (`auth_method: "managed"`) needs neither.
 
 Keep working files in `~/crew-campaigns/<launch>/`, outside any git repo, made private
 (`umask 077; mkdir -p ~/crew-campaigns/<launch>`: folders 0700, files 0600). Don't use a session
@@ -78,7 +90,10 @@ file under `~/crew-lists/webhooks/` (step 6).
    success event; the lead event name (`<Launch> Campaign Lead`; say `Beta` only when the page says
    beta). List the customers the product pages show (the logo wall) and ask whether to exclude them.
    Confirm with the user.
-2. **Leads.** [references/lead-sourcing.md](references/lead-sourcing.md): three stages, each one
+2. **Leads.** First check what the search needs, now and not earlier: Python 3, `jq` and treg
+   (signed in, with balance). Install what is missing only with the user's yes, or stop here and
+   hand a list they have to `linkedin-outreach`.
+   [references/lead-sourcing.md](references/lead-sourcing.md): three stages, each one
    shell command that runs its treg calls in parallel and prints one table. Call the endpoints it
    lists directly; `catalog_search` only when one fails. For a demo, use its Demo mode: one
    command, about a minute. Write
@@ -94,7 +109,10 @@ file under `~/crew-lists/webhooks/` (step 6).
    `LinkedIn Reply Received`), do not change it: tell the user both Agents will act on that event and
    that it must be settled before Live. The same goes for an Agent on `identify`, which steps 9 and 11
    send one of per lead; if it is Live, send nothing without the user's yes.
-5. **HeyReach campaigns.** Crew sequences and HeyReach executes one touch, so create one
+5. **HeyReach campaigns.** On a managed channel, skip this step: Crew already made one campaign per
+   LinkedIn action (Connection request, Message, View profile, Follow, Like a recent post), and
+   `channels_resources` lists them with the fields each action binds (`linkedin-outreach` step 2).
+   Offer the warm-up moves from that list. With the team's own HeyReach: Crew sequences and HeyReach executes one touch, so create one
    single-step campaign per Agent move that needs one. Connect and Message are the base; offer the
    warm-up moves too (view their profile, follow them, like their latest post) and let the user
    pick. Replies are direct messages and need none. Drop leads already active in another campaign.
