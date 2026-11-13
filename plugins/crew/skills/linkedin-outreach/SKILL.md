@@ -1,12 +1,12 @@
 ---
 name: linkedin-outreach
-description: Turn a list of LinkedIn leads into one Crew Agent that works each person toward an outcome over LinkedIn through HeyReach, choosing its next move (connect, message, reply or wait) from everything that has happened with them. Checks the setup, builds and dry-runs the Agent over the Crew MCP, runs it in Shadow on real leads, sends the list, and hands the Live switch to a human. Use when someone has LinkedIn leads (from analysis, a CSV or a CRM) and wants personalised LinkedIn outreach with Crew and HeyReach.
-compatibility: Needs the Crew MCP server connected to the user's workspace (agent, draft, preview, analytics, channels, webhooks tools), a Crew workspace with a HeyReach channel (a workspace feature: the plugin README's Workspace features table), a shell, Python 3, and the sibling skill send-list, whose scripts/send_leads.py sends the leads (run it by absolute path).
+description: Turn a list of LinkedIn leads into one Crew Agent that works each person toward an outcome over LinkedIn through HeyReach, choosing its next move (connect, message, reply or wait) from everything that has happened with them. Checks the setup, builds and dry-runs the Agent over the Crew MCP, runs it in Shadow on real leads, sends the list, and hands the Live switch to a human. Use whenever someone already has the people (from analysis, a CSV, a CRM export, their own LinkedIn connections or warm contacts) and wants personalised LinkedIn outreach with Crew and HeyReach, even when they call it lead generation. It needs no lead search, treg or jq.
+compatibility: Needs the Crew MCP server connected to the user's workspace (agent, draft, preview, analytics, channels, webhooks tools), a Crew workspace with a HeyReach channel (a workspace feature: the plugin README's Workspace features table), a shell, Python 3 from the step that first sends the list (checked then, not before), and the sibling skill send-list, whose scripts/send_leads.py sends the leads (run it by absolute path).
 ---
 
 # LinkedIn outreach with Crew and HeyReach
 
-Crew decides what to say to each person and when, and reacts to what comes back. HeyReach sends from the team's own LinkedIn accounts. This skill sets up ONE Crew Agent with a goal, an outcome to aim for, and these moves:
+Crew decides what to say to each person and when, and reacts to what comes back. It sends through HeyReach, from the user's own LinkedIn account. Usually Crew runs HeyReach itself: the user connects their LinkedIn account in Crew and needs no HeyReach account (a **managed** channel). A team that already runs HeyReach can connect its own account with an API key instead. This skill sets up ONE Crew Agent with a goal, an outcome to aim for, and these moves:
 
 ```text
 move      what it is                           what it can reach
@@ -16,7 +16,7 @@ Reply     message in the existing thread       someone we are talking to
 hold      nothing                              often the right move
 ```
 
-More moves fit the same shape: viewing their profile, following them or liking their latest post is each one more single-step HeyReach campaign with no variable, plus its own Option. The `linkedin-campaign` skill's `references/heyreach-campaigns.md` shows how.
+More moves fit the same shape: viewing their profile, following them or liking their latest post is each one more single-step HeyReach campaign with no variable, plus its own Option. On a managed channel all three already exist as actions (step 2); with the team's own HeyReach each needs its campaign first. The `linkedin-campaign` skill's `references/heyreach-campaigns.md` → "Add a move to the Agent" shows how. Keep a first Agent to the three moves above.
 
 The Agent hears the lead arriving, what HeyReach reports back (accepted, not sent, replied), and any product events the user adds. On each, it reads everything that has happened with the person and picks the next move. **There is no fixed sequence, and the template must not grow one:** describe what a move does and what it can reach, never "on event X, do Y". Where the Agent chooses badly, give it the missing fact.
 
@@ -26,9 +26,9 @@ The Agent hears the lead arriving, what HeyReach reports back (accepted, not sen
 
 Ask the user; never work around them. Each hands over a credential or starts real sends.
 
-- Connect HeyReach in Crew: with a HeyReach API key, or, where the app offers it, as a LinkedIn account connected through Crew, which needs no HeyReach account. Crew registers HeyReach's webhooks itself.
+- Connect LinkedIn in the Crew app: Channels → a new HeyReach channel → **LinkedIn account**. Signed in to LinkedIn in that browser, they open the Cookie-Editor extension on linkedin.com, choose Export, then JSON, paste it, pick their country and accept that LinkedIn does not allow automation; LinkedIn may ask for a code. Crew keeps none of the cookies and sets up the account and its actions in about ten seconds. Never ask for the cookies in chat: they are the person's LinkedIn session. A workspace has one LinkedIn account, and a LinkedIn account is in one workspace at a time. A team with its own HeyReach connects it with the **API key** method instead. Crew registers HeyReach's webhooks either way.
 - Edit, revoke or reveal the credentials of an existing webhook; the Crew MCP leaves these out on purpose.
-- Get the **HeyReach channel** turned on if the workspace doesn't have it; without it HeyReach can't be connected at all. The optional enrichment in step 4 also needs **Profile enrichment**. Both are workspace features: [Workspace features](../../README.md#workspace-features) says who changes them and how to tell. Add any MCP or API connection an enrichment uses.
+- If the Channels page offers no **LinkedIn account** to connect, ask RudderStack to turn it on for the workspace. The Crew MCP cannot read that switch, so never tell the user it is off on a guess. The optional enrichment in step 4 also needs **Profile enrichment**. Both are workspace features: [Workspace features](../../README.md#workspace-features) says who changes them and how to tell. Add any MCP or API connection an enrichment uses.
 - Switch the Agent Live. `agent_update` refuses `live` on purpose.
 
 **The lead webhook** (format `rudderstack`) carries the leads in. Reuse one the user already has. Otherwise create it with `webhooks_create` (`{"name": "<LAUNCH> leads", "format": "rudderstack"}`), which needs `webhooks:write` on the Crew MCP token (an "Agent setup" token, or an OAuth role with it); without that the user creates it in Settings → Integrations → Webhooks. Either way the token is shown once: save the URL and token in the webhook's file, `~/crew-lists/webhooks/<webhookId>.env`, as `workspace-setup`'s `references/events-catalog.md` → "Test events from Claude Code" step 2 says (it also gives the URL's shape). The send script reads that file itself (step 7). Never print the token or put it on a command line, `CREW_WEBHOOK_TOKEN=… python3` included: it lands in the transcript and the process list.
@@ -37,8 +37,11 @@ Ask the user; never work around them. Each hands over a credential or starts rea
 
 ## Collect the inputs
 
-1. **The leads file**, CSV or JSON. Each lead needs `name` and `linkedin_url` (a `linkedin.com/in/…` profile). Optional: `id` (the person's user id in the product, when they are already a user), `title`, `company`, `segment`, `is_connection` (`true`/`false`), `talking_point`. Every other column becomes an event property.
-   **Anything in the event can end up in the message.** Keep scores, private notes and the reason they were picked out of the file: in tests the model repeated a lead's "reason" even when told not to. Put in only what is fine to say to them.
+1. **The leads file**, CSV or JSON. Each lead needs `name` and `linkedin_url` (a `linkedin.com/in/…` profile). Optional: `id` (the person's user id in the product, when they are already a user), `title`, `company`, `segment`, `is_connection` (`true` for someone already connected to the sender, else `false`), `talking_point`. Every other column becomes an event property.
+   - **A file of their own rarely has these headers.** Read its header and a few rows, then write a copy under these names: a firm or company column becomes `company`; a connection degree of 1st becomes `is_connection: true`, and 2nd or 3rd becomes `false` (a second-degree contact is reached by Connect first, never by Message). Show the user the mapping and every column you leave out.
+   - **No `linkedin_url` column:** for the user's own first-degree connections, LinkedIn's data export lists each profile URL (Settings & Privacy → Data privacy → Get a copy of your data → Connections); match it to the file by name and company. Anyone else's URL comes from the user. Leave out a row with no URL rather than guess one: the URL decides who receives the message.
+
+   **Anything in the event can end up in the message.** Keep scores, priority, status, private notes, mutual connections and the reason they were picked out of the copy: in tests the model repeated a lead's "reason" even when told not to. Put in only what is fine to say to them.
 2. **The launch:** a short name (`ABC`), one sentence on the offer, the rule for who fits, and the facts a reply may state (what it does, price, integrations). The Agent may state no other product fact: in tests a reply implied an integration nobody gave it.
 3. **The outcome:** what the conversation is for (a demo, a trial), and the event that says it happened, such as `ABC Demo Booked`, if the workspace has one. It becomes the Agent's success event. No such event: drop `successEvent`.
 4. **Other signals, optional:** product events the workspace already sends that say something about interest, such as `Pricing Page Viewed` or `ABC Trial Started` (`catalog_list` shows them). Each becomes another trigger; the Agent decides whether it calls for a move.
@@ -46,19 +49,17 @@ Ask the user; never work around them. Each hands over a credential or starts rea
 
 ## 1. Check the setup (reads only)
 
-- `channels_list`: the HeyReach channel's id, and `settings.profile_url_identifier`, the identifier the profile URL travels under (usually `linkedin_url`). No HeyReach channel: stop, the user connects it first. If Crew offers no HeyReach option to connect, the workspace doesn't have the HeyReach channel feature yet ([Workspace features](../../README.md#workspace-features)).
+- `channels_list`: the HeyReach channel's id, its `auth_method` (`managed`: a LinkedIn account connected through Crew; `api_key`: the team's own HeyReach) and `settings.profile_url_identifier`, the identifier the profile URL travels under (`linkedin_url` when it is not set). No HeyReach channel: the user connects their LinkedIn account (above) before step 2; carry on with the inputs and step 3 meanwhile. `channels_list` shows only connected channels, so a missing one says nothing about the workspace's features ([Workspace features](../../README.md#workspace-features)).
 - `webhooks_list`: the lead webhook is listed, format `rudderstack`.
 - `catalog_list`: the success event and each other signal are listed. A success event that has never arrived is fine, since Crew matches it by name when it does, but ask the user whether the name is right.
-- `agent_list`: no other running Agent triggers on the event name, on any of the user's other signals, or on `identify`, and none triggers on `LinkedIn Connection Accepted`, `LinkedIn Outreach Not Sent` or `LinkedIn Reply Received` without the condition `resolved_agent_id` = `@self` (the template's own LinkedIn triggers carry it, so this Agent hears only its own sends) (the send posts one identify per lead, and Crew names it `identify`). Two Agents on one event both act; ask the user which one owns it, and never send while a Live Agent on one of them would act on these leads without the user's yes.
+- `agent_list`: no other running Agent triggers on the event name, on `LinkedIn Connection Accepted`, `LinkedIn Outreach Not Sent`, `LinkedIn Reply Received`, on any of the user's other signals, or on `identify` (the send posts one identify per lead, and Crew names it `identify`). Two Agents on one event both act. Every Agent on the channel hears its LinkedIn events: the template keeps this Agent's to its own sends, but another Agent whose LinkedIn triggers lack that condition also acts on this one's sends. Ask the user which one owns each event, and never send while a Live Agent on one of them would act on these leads without the user's yes.
 - Its file `~/crew-lists/webhooks/<webhookId>.env` exists on this machine (`test -s`); never print it.
 
-## 2. The HeyReach campaigns
+## 2. The LinkedIn actions
 
-**A LinkedIn account connected through Crew** (the channel's `auth_method` in `channels_list` is `managed`) has no HeyReach account, and Crew already made its campaigns, one per action. Skip the rest of this step. `channels_resources` on that channel lists its actions; in step 5 copy `bind.fields` of `Connection request` and of `Message` unchanged onto the two actions (it sets `heyreachCampaign`), and name its variables (`crew_note`, `crew_message`) wherever the template's copy prompts name `crew_connection_note` and `crew_message`. One that needs attention, or is missing, is not ready: the user opens the channel's Connection tab in Crew. These campaigns serve every Agent on the channel, and a person goes through each once, so before sending check with the user that no other Agent on the channel is working the same leads.
+**Managed channel: nothing to create.** When the account connected, Crew made one single-step campaign per LinkedIn action. `channels_resources` with the channel's id lists them: Connection request (its note is the variable `crew_note`, at most 200 characters on a free LinkedIn account), Message (`crew_message`), View profile, Follow and Like a recent post. A `ready` item carries `bind`, and step 5 copies its `bind.fields` onto the matching action. An item needing `attention` says what to do in `detail`: a stopped action starts again from the channel's Connection tab while the account is connected. They run Monday to Friday, 08:00 to 18:00 in the user's time zone. Every Agent in the workspace shares them, and HeyReach takes a person through a campaign once, so someone who already got a connection request through this account (from any Agent) can't be sent another.
 
-With a HeyReach API key:
-
-Two new campaigns in HeyReach: the user creates them, or, with a HeyReach MCP connected and the user's yes to the plan, you do (the `linkedin-campaign` skill carries sequence JSON that works). Old campaigns keep running and are not touched; Crew ignores their traffic.
+**The team's own HeyReach (`api_key`): two new campaigns.** The user creates them, or, with a HeyReach MCP connected and the user's yes to the plan, you do (the `linkedin-campaign` skill carries sequence JSON that works). Old campaigns keep running and are not touched; Crew ignores their traffic.
 
 | Campaign             | Its one action                 | Variable to type in                           |
 | -------------------- | ------------------------------ | --------------------------------------------- |
@@ -68,7 +69,10 @@ Two new campaigns in HeyReach: the user creates them, or, with a HeyReach MCP co
 - One action each (a connection check before the message is fine), senders attached, a schedule set, and started: Crew refuses to enroll anyone into a paused campaign.
 - Type the variable by hand. HeyReach's editor offers a custom variable only once a lead already carries it.
 - A person goes through a campaign once. A new launch needs new campaigns.
-- Drop from the leads file anyone still active in an old campaign, or already being worked by another Crew Agent, or they get two conversations at once. If a HeyReach MCP is connected, use it to read campaigns and memberships; otherwise ask the user.
+- Drop from the leads file anyone still active in an old campaign, or they get two conversations at once. If a HeyReach MCP is connected, use it to read campaigns and memberships; otherwise ask the user.
+- `channels_resources` then lists them like any campaign, each `ready` one with its `bind`.
+
+Either way, drop from the leads file anyone another Crew Agent is already working on.
 
 ## 3. Check the leads
 
@@ -78,7 +82,7 @@ Two new campaigns in HeyReach: the user creates them, or, with a HeyReach MCP co
 python3 -I <send-list>/scripts/send_leads.py --file leads.csv --event "ABC Launch Lead" --check
 ```
 
-It sends nothing. It lists the rows it will skip (a malformed profile URL, no name, the same profile twice); the real send skips them too. Fix any the user wants kept. A row with an email and no `linkedin_url` is not skipped: it goes as an email lead, which a HeyReach Agent has no profile to reach, so drop such rows from the file.
+This is the first step that needs Python 3. If `python3` doesn't answer, find it now as `workspace-setup` → "Scripts" says (on Windows it is often `py -3`), and use that in every command below. It sends nothing. It lists the rows it will skip (a malformed profile URL, no name, the same profile twice); the real send skips them too. Fix any the user wants kept. A row with an email and no `linkedin_url` is not skipped: it goes as an email lead, which a HeyReach Agent has no profile to reach, so drop such rows from the file.
 
 ## 4. Optional: personalise with an enrichment
 
@@ -87,18 +91,20 @@ An enrichment researches each person when a decision runs. The result is cached 
 - `research` with the built-in `web_search`. Brief: "Find this person's company's recent news, launches or hiring that relate to <offer>." Outputs: `talking_point` (text), `evidence_url` (url).
 - `mcp` on a LinkedIn-posts tool, when the workspace has one: the person's recent posts.
 
-**A research enrichment needs an identity, and the leads file alone gives it none.** Research runs only for a person with an external id, an email, a phone, or a user id that is a LinkedIn profile URL (`https://www.linkedin.com/in/<slug>`, as people from some visitor-identification tools arrive). The script's user id is the file's `id`, else `linkedin:<slug>`, which is none of these, and the profile URL it sends is a send address, not an identity. So on a plain leads file every research enrichment is skipped (`missing_input`: "research needs an email, phone, external id, or a LinkedIn profile URL as the user ID"). Give each lead a LinkedIn member id first: a LinkedIn profile lookup returns `memberId`; a custom-format webhook maps `memberId` → external id `linkedin.member_id` and `userId` → identifier `user_id` (`webhooks_create` can create it with that mapping active); then, while the Agent is still Off, send one event per lead carrying both (any event name that is not a trigger). `users_list` then shows each lead with a `linkedin.member_id`. The `linkedin-campaign` skill does all of this.
+**A research enrichment needs an identity.** Research runs only for a person with an external id, an email, a phone, or a user id that is their LinkedIn profile URL (`https://www.linkedin.com/in/<slug>`). By default the script keys a lead by the file's `id`, else by `linkedin:<slug>`, which is none of these; the profile URL it also sends is a send address, not an identity, so every research enrichment is skipped (`missing_input`: "research needs an email, phone, external id, or a LinkedIn profile URL as the user ID"). **Send a new list with `--key profile`** (steps 7 and 8): a lead without an `id` then has its profile URL as its user id, and research runs with nothing else to set up. A list already sent under the default key keeps it, because a resend with `--key profile` would make each of those leads a second person; give those leads a LinkedIn member id instead, as the `linkedin-campaign` skill does.
 
-Run `enrichment_list` first. `enrichment_preview` takes the definition itself, so preview it on two leads with `subject.externalIds = {"linkedin.member_id": "<id>"}`, show the user the result, and only then `enrichment_create`. Put the definition's id in the body's `enrichmentIds`. A Dry Run enriches each person who has no current result, so no `enrichment_refresh` is needed first.
+Run `enrichment_list` first. `enrichment_preview` takes the definition itself, so preview it on two leads with `subject.userId` set to the lead's profile URL (`https://www.linkedin.com/in/<slug>`), show the user the result, and only then `enrichment_create`. Put the definition's id in the body's `enrichmentIds`. A Dry Run enriches each person who has no current result, so no `enrichment_refresh` is needed first.
 
 ## 5. Build the Agent
 
-Read `agent_bodySchema`, then fill [references/agent-body.json](references/agent-body.json). Replace every `<PLACEHOLDER>`; the campaign ids are numbers. Keep these as they are:
+Read `agent_bodySchema`, then fill [references/agent-body.json](references/agent-body.json). Replace every `<PLACEHOLDER>`. For Connect and Message, `heyreachCampaign` is the `bind.fields.heyreachCampaign` of the matching `channels_resources` item (step 2), copied unchanged. Keep these as they are:
 
 - `"version": 1` and `"launchMode": "shadow"`, so the body says what it will run as (`workspace-setup`'s `references/agent-schema.md` → "Runtime state, drafts and publishing").
 - Dedup off, 3 actions a day and 6 a week per person. Dedup counts every action this Agent takes for a person, so it would block every step after the first. A resend is stopped by the message id within one pass, and by HeyReach's "already in this campaign" check when Live.
 - The options as written: each says what the move is and what it can reach, not when to use it. Edit the copy prompts freely; keep the options free of event-to-move rules.
 - The stop rule as a hard constraint, the "Where things stand" signal (it tells the Agent a Shadow decision sent nothing and a re-sent lead is the same person), and `whenNoClearFit: hold_off`.
+- The own-sends condition (`resolved_agent_id` `=` `@self`) on the three LinkedIn triggers. Every Agent on the channel hears its LinkedIn events, and without it this Agent would answer replies to another Agent's messages. Leave it off the lead event and the user's other signals.
+- `"needsApproval": true` on every action policy. An action without it sends as soon as the Agent is Live; with it, each Live message waits on the Decisions page for a person's OK. The user turns it off per action in the editor once they trust that action's messages. Shadow sends nothing either way.
 - Add the user's other signals (input 4) as triggers next to the four already there.
 - If the workspace has a Slack channel, the user can add a fourth action that hands demo or pricing requests to a rep.
 
@@ -121,28 +127,30 @@ To change the Agent: `draft_createForSkill` with the whole edited body and `expe
 With the user's yes, `agent_update` to `shadow`, then send 10 to 20 leads. The script reads the URL and token from the webhook's file, so neither appears in the command:
 
 ```bash
-python3 -I <send-list>/scripts/send_leads.py --env ~/crew-lists/webhooks/<webhookId>.env --file leads.csv --event "ABC Launch Lead" --identifier linkedin_url --pass shadow --limit 20
+python3 -I <send-list>/scripts/send_leads.py --env ~/crew-lists/webhooks/<webhookId>.env --file leads.csv --event "ABC Launch Lead" --identifier linkedin_url --key profile --pass shadow --limit 20
 ```
 
-The script prints the host it sends to first, and sends only over https.
+The script prints the host it sends to first, and sends only over https. Keep `--key profile` on every later send of this list (step 4 says why); leave it off only for a list already sent without it.
 
 Wait about a minute, then read the results with `analytics_list` (`agents: ["<id>"]`, `mode: "shadow"`, `range: "1h"`, `outcomes: ["delivered", "no_action", "blocked", "failed", "rate_limited", "deduplicated"]`; without `outcomes` the holds are left out). `analytics_list` carries no message text, so read every decision with `analytics_get`. Show the user what each person would have received, and every refusal: `recipient_validation` means a bad or missing profile URL.
 
-Now dry-run the journey on one lead the Shadow pass contacted, every event below as one entry of the `event` list of a single `preview_tryEvent` call, with that lead's `userId` (the file's `id`, else `linkedin:<slug>`) and the event as Crew records it. Its properties: `campaign_id`, `campaign_name`, `sender_name`, `channel_id`, `channel_type`, `decision_id`, `agent_id`, `agent_name`, `action`, plus `reply` on a reply and `reason_code` on a not-sent (`catalog_get` shows them). If the pass contacted nobody, use a fresh `userId`; the Agent treats a journey event as coming from someone it already qualified. `LinkedIn Connection Accepted`; `LinkedIn Outreach Not Sent` with `reason_code: "AlreadyAConnection"`; `LinkedIn Reply Received` with `reply` set to a question, to "not right now", to "please stop messaging me", to a demo request, and to a question about an integration that is not in the facts; and each of the user's other signals. Check that each move suits where things stand (no second connection request to someone a Live send already reached; after Shadow alone a second Connect is right, since Shadow sent nothing), the stop is held, no reply states a fact beyond the ones the user gave, and no message says what we saw them do.
+Now dry-run the journey on one lead the Shadow pass contacted, every event below as one entry of the `event` list of a single `preview_tryEvent` call, with that lead's `userId` (the file's `id`, else its profile URL `https://www.linkedin.com/in/<slug>`, or `linkedin:<slug>` for a list sent without `--key profile`) and the event as Crew records it. Its properties: `campaign_id`, `campaign_name`, `sender_name`, `channel_id`, `channel_type`, `decision_id`, `agent_id`, `agent_name`, `resolved_agent_id` (this Agent's id), `action`, plus `reply` on a reply and `reason_code` on a not-sent (`catalog_get` shows them). If the pass contacted nobody, use a fresh `userId`; the Agent treats a journey event as coming from someone it already qualified. `LinkedIn Connection Accepted`; `LinkedIn Outreach Not Sent` with `reason_code: "AlreadyAConnection"`; `LinkedIn Reply Received` with `reply` set to a question, to "not right now", to "please stop messaging me", to a demo request, and to a question about an integration that is not in the facts; and each of the user's other signals. Check that each move suits where things stand (no second connection request to someone a Live send already reached; after Shadow alone a second Connect is right, since Shadow sent nothing), the stop is held, no reply states a fact beyond the ones the user gave, and no message says what we saw them do.
 
-Shadow sends nothing, so HeyReach reports nothing about a Shadow decision itself. To hear real accepts and replies in Shadow, run the same leads through a HeyReach campaign the team controls: Crew matches each accept and reply to the lead by profile URL and the Shadow Agent decides on it. Such an event reaches Shadow Agents only, never a Live one. A lead Crew never received stays invisible.
+Shadow sends nothing, so HeyReach reports nothing about a Shadow decision itself. To hear real accepts and replies in Shadow, a team with its own HeyReach can run the same leads through a campaign it controls (a managed channel has no such campaign): Crew matches each accept and reply to the lead by profile URL and the Shadow Agent decides on it. Such an event reaches Shadow Agents only, never a Live one. A lead Crew never received stays invisible.
 
 ## 8. Hand Live to a human
 
 Tell the user to do these, in order:
 
 1. Open the Agent in Crew. On each campaign action, check the campaign card: running, variable found.
-2. For the first batch, consider "needs approval" on the actions: each Live message waits for a person's OK.
+2. Check "needs approval" is on for every action (step 5 set it): each Live message waits on the Decisions page for a person's OK. Turn it off per action later, once that action's messages are trusted.
 3. Switch the Agent Live.
-4. Send the leads again with `--pass live`. **Going Live does not send what Shadow decided.** Live acts only on new events, and a resend with the same message id is ignored; the new pass name gives every event a new id.
+4. Send the leads again with `--pass live` and the same `--key` as before. **Going Live does not send what Shadow decided.** Live acts only on new events, and a resend with the same message id is ignored; the new pass name gives every event a new id.
 
 ## After launch
 
-- HeyReach sends a campaign step 20 minutes to 2 hours after the enroll, at about 25 connection requests a day per sender. Its webhooks reach Crew 30 minutes to 2.5 hours later. Crew's poll finds a request HeyReach could not send every 15 minutes.
+- HeyReach sends a campaign step 20 minutes to 2 hours after the enroll, at about 25 connection requests a day per sender, and on a managed channel only Monday to Friday, 08:00 to 18:00 in the user's time zone. Its webhooks reach Crew 30 minutes to 2.5 hours later. Crew's poll finds a request HeyReach could not send every 15 minutes.
+- On a managed channel, Reply reads the account's conversations through Crew's HeyReach, which few runs have used yet: read the first real reply's decision before trusting Reply, and keep its "needs approval" on until then.
 - `analytics_list` with `mode: "live"` lists the decisions; `analytics_getLineage` shows one person's journey.
-- To stop everything at once: `agent_update` to `off`.
+- **An approved message is queued, not sent.** Crew counts a HeyReach send as delivered once HeyReach has enrolled the person; LinkedIn shows it only when HeyReach's schedule reaches them (the first bullet). Say "queued in HeyReach" until the sent report arrives.
+- To stop deciding: `agent_update` to `off`. That stops new decisions only: people Crew already enrolled stay in HeyReach's queue. To stop those too, a team with its own HeyReach pauses the campaigns there; Crew never resumes a paused one, and enrolls no one into it. A managed channel has no HeyReach login, and Crew restarts its stopped actions, so there the only full stop is deleting the channel in the Crew app: that disconnects the LinkedIn account and leaves every queued step without a sender. A later connect makes new actions, and each Agent's actions are bound to them again.

@@ -118,19 +118,22 @@
         "id": "connect_on_linkedin",
         "actId": "connect",
         "action": "Connect on LinkedIn",
-        "channelId": "<HEYREACH_CHANNEL_ID>"
+        "channelId": "<HEYREACH_CHANNEL_ID>",
+        "needsApproval": true
       },
       {
         "id": "message_on_linkedin",
         "actId": "message",
         "action": "Message on LinkedIn",
-        "channelId": "<HEYREACH_CHANNEL_ID>"
+        "channelId": "<HEYREACH_CHANNEL_ID>",
+        "needsApproval": true
       },
       {
         "id": "reply_on_linkedin",
         "actId": "reply",
         "action": "Reply on LinkedIn",
-        "channelId": "<HEYREACH_CHANNEL_ID>"
+        "channelId": "<HEYREACH_CHANNEL_ID>",
+        "needsApproval": true
       }
     ]
   },
@@ -146,17 +149,7 @@
         "optionalInputs": [],
         "outputFields": []
       },
-      "heyreachCampaign": {
-        "id": "<CONNECT_CAMPAIGN_ID>",
-        "name": "<LAUNCH> · Connect",
-        "variables": [
-          {
-            "key": "crew_connection_note",
-            "places": ["step 1, connection note"],
-            "maxChars": 200
-          }
-        ]
-      }
+      "heyreachCampaign": "<COPY bind.fields.heyreachCampaign FROM THE channels_resources ITEM: Connection request on a managed channel, else the <LAUNCH> · Connect campaign>"
     },
     {
       "id": "message_on_linkedin",
@@ -169,17 +162,7 @@
         "optionalInputs": [],
         "outputFields": []
       },
-      "heyreachCampaign": {
-        "id": "<MESSAGE_CAMPAIGN_ID>",
-        "name": "<LAUNCH> · Message",
-        "variables": [
-          {
-            "key": "crew_message",
-            "places": ["message"],
-            "maxChars": 2048
-          }
-        ]
-      }
+      "heyreachCampaign": "<COPY bind.fields.heyreachCampaign FROM THE channels_resources ITEM: Message on a managed channel, else the <LAUNCH> · Message campaign>"
     },
     {
       "id": "reply_on_linkedin",

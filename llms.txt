@@ -17,26 +17,26 @@ our RudderStack events, dry-run it on made-up users, then take it to Shadow").
   1. Check what is already there: `claude plugin list`. Skip every step below whose plugin is
      listed. If `crew@rudder-crew` is listed, bring it up to date instead:
      `claude plugin marketplace update rudder-crew`, then `claude plugin update crew@rudder-crew`.
+     If there is no `claude` command (the desktop app often runs without one on the PATH,
+     Windows especially), don't search the disk for it. Ask the human to type
+     `/plugin marketplace add rudderlabs/crew-plugin`, then `/plugin install crew@rudder-crew`,
+     in this session, and go on at step 3.
   2. Install the Crew plugin:
 
          claude plugin marketplace add rudderlabs/crew-plugin
          claude plugin install crew@rudder-crew
 
-  3. If the human's events are in RudderStack (or they are not sure), also install RudderStack's
-     own plugin, which connects the RudderStack MCP that reads their sources and events:
-
-         claude plugin marketplace add rudderlabs/rudder-agent-skills
-         claude plugin install rudder-core@rudder-agent-skills
-
-  4. Check `python3 --version`: the skills' scripts need Python 3.8 or later.
-  5. Tell the human, in one message: "Type `/reload-plugins`, then say continue. If it says the
+     Install nothing else now: not RudderStack's plugin, not Python, not any other tool. Each
+     skill checks for what one of its steps needs when it reaches that step, so someone who
+     never uses that step never waits for it. `connect-rudderstack` has the human add
+     RudderStack's own plugin when their events are in RudderStack.
+  3. Tell the human, in one message: "Type `/reload-plugins`, then say continue. If it says the
      reload changes MCP tools, type `/reload-plugins --force`." Wait for them. If `/mcp` still
      shows no `plugin:crew:crew` after that, they start a new Claude Code session and paste the
      same line again: setup skips what is already installed.
-  6. Sign-in, done by the human: `/mcp`, then `plugin:crew:crew`, then Authenticate. The browser
-     sign-in picks their Crew workspace. If `rudder-core` was installed, the same for
-     `plugin:rudder-core:rudderstack`. You cannot start either sign-in yourself.
-  7. Check: call `context_get` and say the workspace's name back. If it is the wrong workspace,
+  4. Sign-in, done by the human: `/mcp`, then `plugin:crew:crew`, then Authenticate. The browser
+     sign-in picks their Crew workspace. You cannot start the sign-in yourself.
+  5. Check: call `context_get` and say the workspace's name back. If it is the wrong workspace,
      they clear the Crew server's authentication in `/mcp` and sign in again.
 
 - **Cowork or claude.ai chat.** Install nothing. An organization Owner adds the plugin to the
@@ -72,9 +72,10 @@ to the <name> workspace; RudderStack is connected too"), then:
   run, a change, entering a set, or traits on people);
   `send-list` to hand a list of people to an Agent once; `calibrate` to review an Agent's decisions card by card;
   `lead-scoring` for scoring and routing leads; `expand-audience` to find the right person at each
-  company in a list, inside Crew, and hand them to outreach; `linkedin-outreach` to turn a list of
-  LinkedIn leads into an outreach Agent over HeyReach; `linkedin-campaign` to run a LinkedIn
-  campaign end to end, from finding the leads to the Agent in Shadow.
+  company in a list, inside Crew, and hand them to outreach; `linkedin-outreach` whenever the
+  human already has the people for LinkedIn outreach (a CSV, a CRM export, their own
+  connections or warm contacts), even when they call it lead generation; `linkedin-campaign`
+  only when Crew is to find the leads too, from finding them to the Agent in Shadow.
 
 **Rules that hold everywhere.**
 
