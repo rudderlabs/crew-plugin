@@ -33,7 +33,7 @@ step 2, not here.
   `users:write`, `mcp:read`, `webhooks:read` and `webhooks:write`. A tool missing from the list means
   the token lacks its permission.
 - **In the workspace:** a HeyReach channel (`channels_list`). With none, the user connects their
-  LinkedIn account as `linkedin-outreach` → "Only a human can do these" says (Crew then runs
+  LinkedIn account as `linkedin-outreach` → "Connect LinkedIn, step by step" says (Crew then runs
   HeyReach and makes the campaigns). Three workspace features: the **HeyReach channel** with its
   LinkedIn account method, assumed on (the Crew MCP cannot read it, so never call it off on a
   guess; ask RudderStack only when the Channels page offers no LinkedIn account); **Profile enrichment**, which runs

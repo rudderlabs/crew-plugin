@@ -26,10 +26,31 @@ The Agent hears the lead arriving, what HeyReach reports back (accepted, not sen
 
 Ask the user; never work around them. Each hands over a credential or starts real sends.
 
-- Connect LinkedIn in the Crew app: Channels → a new HeyReach channel → **LinkedIn account**. Signed in to LinkedIn in that browser, they open the Cookie-Editor extension on linkedin.com, choose Export, then JSON, paste it, pick their country and accept that LinkedIn does not allow automation; LinkedIn may ask for a code. Crew keeps none of the cookies and sets up the account and its actions in about ten seconds. Never ask for the cookies in chat: they are the person's LinkedIn session. A workspace has one LinkedIn account, and a LinkedIn account is in one workspace at a time. A team with its own HeyReach connects it with the **API key** method instead. Crew registers HeyReach's webhooks either way.
+- Connect LinkedIn in the Crew app. You walk them through it ("Connect LinkedIn, step by step" below). It hands Crew their LinkedIn session and their acceptance of LinkedIn's rules, so it is never done over MCP or through you. A team with its own HeyReach connects it with the **API key** method instead. Crew registers HeyReach's webhooks either way.
 - Edit, revoke or reveal the credentials of an existing webhook; the Crew MCP leaves these out on purpose.
-- If the Channels page offers no **LinkedIn account** to connect, ask RudderStack to turn it on for the workspace. The Crew MCP cannot read that switch, so never tell the user it is off on a guess. The optional enrichment in step 4 also needs **Profile enrichment**. Both are workspace features: [Workspace features](../../README.md#workspace-features) says who changes them and how to tell. Add any MCP or API connection an enrichment uses.
+- Ask RudderStack for a workspace feature the workspace lacks: the **LinkedIn account** method, when the Channels page doesn't offer it (the table below), and **Profile enrichment** for the optional enrichment in step 4. The Crew MCP cannot read either switch, so never tell the user one is off on a guess. [Workspace features](../../README.md#workspace-features) says who changes them and how to tell. Add any MCP or API connection an enrichment uses.
 - Switch the Agent Live. `agent_update` refuses `live` on purpose.
+
+### Connect LinkedIn, step by step
+
+When `channels_list` has no HeyReach channel (step 1), give the user these steps in one message, with the links, and wait for them to say it is done. Never ask for the cookies yourself, and never take them if offered: they are the person's LinkedIn login, and they go into Crew's form only.
+
+1. In Chrome, sign in to LinkedIn as the person who will send. Signing out of LinkedIn in this browser later disconnects Crew.
+2. Add the Cookie-Editor extension: <https://chromewebstore.google.com/detail/cookie-editor/hlkenndednhfkekhgcdicdfddnkalmdm>.
+3. Open <https://crew.rudderstack.com/channels>, in the workspace this conversation is signed in to (say its name). Choose **Add channel**, then **HeyReach**. The method reads **LinkedIn account**. Name the channel, for example "LinkedIn".
+4. On a linkedin.com tab, click the Cookie-Editor icon, choose **Export**, then **JSON**, and paste the result into **LinkedIn cookies**.
+5. Pick the country they work from, accept that LinkedIn does not allow automation, and connect. If LinkedIn sends a code by email or in its app, enter it under **Code from LinkedIn**.
+6. Wait for "… is connected" and "Actions ready" (about ten seconds, sometimes a minute), then say so here.
+
+Then check it yourself: `channels_list` has the HeyReach channel with `auth_method: "managed"`, and `channels_resources` on it lists Connection request and Message as `ready`. A workspace has one LinkedIn account, and a LinkedIn account is in one workspace at a time. What the user may see instead:
+
+| The user sees | What to tell them |
+| --- | --- |
+| No HeyReach in Add channel, or HeyReach with no **LinkedIn account** method | If `channels_list` already has a HeyReach channel with `auth_method: "managed"`, it is connected: use it. Otherwise the workspace lacks the feature: ask the RudderStack contact to turn on the LinkedIn account method |
+| "LinkedIn rejected this session" | Sign in to LinkedIn again in that browser, export the cookies again, and retry |
+| Already connected to another Crew workspace | Disconnect it there (delete that workspace's LinkedIn channel), or connect a different LinkedIn account |
+| "Not connected after 3 minutes. The account may be restricted" | Check the account on LinkedIn, then reconnect from the channel's page |
+| "Setting up the LinkedIn actions", or an action not `ready` | Wait a minute and read `channels_resources` again. A stopped action starts again from the channel's Connection tab |
 
 **The lead webhook** (format `rudderstack`) carries the leads in. Reuse one the user already has. Otherwise create it with `webhooks_create` (`{"name": "<LAUNCH> leads", "format": "rudderstack"}`), which needs `webhooks:write` on the Crew MCP token (an "Agent setup" token, or an OAuth role with it); without that the user creates it in Settings → Integrations → Webhooks. Either way the token is shown once: save the URL and token in the webhook's file, `~/crew-lists/webhooks/<webhookId>.env`, as `workspace-setup`'s `references/events-catalog.md` → "Test events from Claude Code" step 2 says (it also gives the URL's shape). The send script reads that file itself (step 7). Never print the token or put it on a command line, `CREW_WEBHOOK_TOKEN=… python3` included: it lands in the transcript and the process list.
 
@@ -49,7 +70,7 @@ Ask the user; never work around them. Each hands over a credential or starts rea
 
 ## 1. Check the setup (reads only)
 
-- `channels_list`: the HeyReach channel's id, its `auth_method` (`managed`: a LinkedIn account connected through Crew; `api_key`: the team's own HeyReach) and `settings.profile_url_identifier`, the identifier the profile URL travels under (`linkedin_url` when it is not set). No HeyReach channel: the user connects their LinkedIn account (above) before step 2; carry on with the inputs and step 3 meanwhile. `channels_list` shows only connected channels, so a missing one says nothing about the workspace's features ([Workspace features](../../README.md#workspace-features)).
+- `channels_list`: the HeyReach channel's id, its `auth_method` (`managed`: a LinkedIn account connected through Crew; `api_key`: the team's own HeyReach) and `settings.profile_url_identifier`, the identifier the profile URL travels under (`linkedin_url` when it is not set). No HeyReach channel: walk the user through "Connect LinkedIn, step by step" (above) before step 2; carry on with the inputs and step 3 meanwhile. `channels_list` shows only connected channels, so a missing one says nothing about the workspace's features ([Workspace features](../../README.md#workspace-features)).
 - `webhooks_list`: the lead webhook is listed, format `rudderstack`.
 - `catalog_list`: the success event and each other signal are listed. A success event that has never arrived is fine, since Crew matches it by name when it does, but ask the user whether the name is right.
 - `agent_list`: no other running Agent triggers on the event name, on `LinkedIn Connection Accepted`, `LinkedIn Outreach Not Sent`, `LinkedIn Reply Received`, on any of the user's other signals, or on `identify` (the send posts one identify per lead, and Crew names it `identify`). Two Agents on one event both act. Every Agent on the channel hears its LinkedIn events: the template keeps this Agent's to its own sends, but another Agent whose LinkedIn triggers lack that condition also acts on this one's sends. Ask the user which one owns each event, and never send while a Live Agent on one of them would act on these leads without the user's yes.
