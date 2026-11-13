@@ -12,15 +12,18 @@
     },
     {
       "id": "accepted",
-      "eventName": "LinkedIn Connection Accepted"
+      "eventName": "LinkedIn Connection Accepted",
+      "when": { "conditions": [{ "property": "resolved_agent_id", "operator": "=", "value": "@self" }] }
     },
     {
       "id": "not_sent",
-      "eventName": "LinkedIn Outreach Not Sent"
+      "eventName": "LinkedIn Outreach Not Sent",
+      "when": { "conditions": [{ "property": "resolved_agent_id", "operator": "=", "value": "@self" }] }
     },
     {
       "id": "reply",
-      "eventName": "LinkedIn Reply Received"
+      "eventName": "LinkedIn Reply Received",
+      "when": { "conditions": [{ "property": "resolved_agent_id", "operator": "=", "value": "@self" }] }
     }
   ],
   "successEvent": [

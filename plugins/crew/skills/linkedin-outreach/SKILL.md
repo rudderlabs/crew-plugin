@@ -26,7 +26,7 @@ The Agent hears the lead arriving, what HeyReach reports back (accepted, not sen
 
 Ask the user; never work around them. Each hands over a credential or starts real sends.
 
-- Connect HeyReach in Crew (API key). Crew registers HeyReach's webhooks itself.
+- Connect HeyReach in Crew: with a HeyReach API key, or, where the app offers it, as a LinkedIn account connected through Crew, which needs no HeyReach account. Crew registers HeyReach's webhooks itself.
 - Edit, revoke or reveal the credentials of an existing webhook; the Crew MCP leaves these out on purpose.
 - Get the **HeyReach channel** turned on if the workspace doesn't have it; without it HeyReach can't be connected at all. The optional enrichment in step 4 also needs **Profile enrichment**. Both are workspace features: [Workspace features](../../README.md#workspace-features) says who changes them and how to tell. Add any MCP or API connection an enrichment uses.
 - Switch the Agent Live. `agent_update` refuses `live` on purpose.
@@ -49,10 +49,14 @@ Ask the user; never work around them. Each hands over a credential or starts rea
 - `channels_list`: the HeyReach channel's id, and `settings.profile_url_identifier`, the identifier the profile URL travels under (usually `linkedin_url`). No HeyReach channel: stop, the user connects it first. If Crew offers no HeyReach option to connect, the workspace doesn't have the HeyReach channel feature yet ([Workspace features](../../README.md#workspace-features)).
 - `webhooks_list`: the lead webhook is listed, format `rudderstack`.
 - `catalog_list`: the success event and each other signal are listed. A success event that has never arrived is fine, since Crew matches it by name when it does, but ask the user whether the name is right.
-- `agent_list`: no other running Agent triggers on the event name, on `LinkedIn Connection Accepted`, `LinkedIn Outreach Not Sent`, `LinkedIn Reply Received`, on any of the user's other signals, or on `identify` (the send posts one identify per lead, and Crew names it `identify`). Two Agents on one event both act; ask the user which one owns it, and never send while a Live Agent on one of them would act on these leads without the user's yes.
+- `agent_list`: no other running Agent triggers on the event name, on any of the user's other signals, or on `identify`, and none triggers on `LinkedIn Connection Accepted`, `LinkedIn Outreach Not Sent` or `LinkedIn Reply Received` without the condition `resolved_agent_id` = `@self` (the template's own LinkedIn triggers carry it, so this Agent hears only its own sends) (the send posts one identify per lead, and Crew names it `identify`). Two Agents on one event both act; ask the user which one owns it, and never send while a Live Agent on one of them would act on these leads without the user's yes.
 - Its file `~/crew-lists/webhooks/<webhookId>.env` exists on this machine (`test -s`); never print it.
 
 ## 2. The HeyReach campaigns
+
+**A LinkedIn account connected through Crew** (the channel's `auth_method` in `channels_list` is `managed`) has no HeyReach account, and Crew already made its campaigns, one per action. Skip the rest of this step. `channels_resources` on that channel lists its actions; in step 5 copy `bind.fields` of `Connection request` and of `Message` unchanged onto the two actions (it sets `heyreachCampaign`), and name its variables (`crew_note`, `crew_message`) wherever the template's copy prompts name `crew_connection_note` and `crew_message`. One that needs attention, or is missing, is not ready: the user opens the channel's Connection tab in Crew. These campaigns serve every Agent on the channel, and a person goes through each once, so before sending check with the user that no other Agent on the channel is working the same leads.
+
+With a HeyReach API key:
 
 Two new campaigns in HeyReach: the user creates them, or, with a HeyReach MCP connected and the user's yes to the plan, you do (the `linkedin-campaign` skill carries sequence JSON that works). Old campaigns keep running and are not touched; Crew ignores their traffic.
 
