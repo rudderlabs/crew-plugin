@@ -83,9 +83,11 @@ An invited person joins as `member`; an admin promotes them under Settings → M
 
 ### Channels
 
-`channels_list`, `channels_get`, `channels_updateLimits`, `channels_setSenderDomain`
+`channels_list`, `channels_get`, `channels_resources`, `channels_updateLimits`, `channels_setSenderDomain`
 
 - `channels_list` gives each channel's id, type and recipient identifier: a Live action needs a real channel id. `channels_get` adds one channel's non-secret settings, its sender limits (`config.limits`) and, for a paced channel, its Live usage (`pacing`).
+- `channels_list` and `channels_get` name, in `events`, what a channel reports back about its sends (a reply, a bounce, an accepted LinkedIn connection). Each is an event name for a trigger or a success event. It arrives for every Agent's sends on that channel, so an Agent that acts only on its own adds the condition `resolved_agent_id` = `@self` to that trigger or success event (`agent_bodySchema` has the rule).
+- `channels_resources` lists what an action on a channel can pick: Slack conversations, Customer.io emails, WhatsApp templates, CleverTap, Braze and HeyReach campaigns, and on a LinkedIn account connected through Crew (`auth_method` `managed`) its LinkedIn actions. Copy an item's `bind.fields` unchanged onto the action (`bind.on` `action`) or its action policy (`policy`). An item that needs attention has no `bind`; its `detail` says what the user fixes in the app.
 - `channels_updateLimits` sets one sender's limits and `channels_setSenderDomain` one domain's daily cap. Both need `channels:write`, which only a role over the sign-in holds (no token scope grants it). Ask first: raising a limit can release messages waiting on that sender.
 - Connecting a channel holds a credential, so it is done in the app.
 
