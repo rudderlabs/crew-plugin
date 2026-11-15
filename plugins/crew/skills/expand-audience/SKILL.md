@@ -17,7 +17,7 @@ This skill owns the first three: scoping the ask, the seed, and the Expand Agent
 Ask the user; never work around them.
 
 - Create the loopback channel in Settings → Channels (channels cannot be created over MCP).
-- Connect LinkedIn in Crew (a LinkedIn account on a new HeyReach channel, as `linkedin-outreach` → "Only a human can do these" says), or an email channel.
+- Connect LinkedIn in Crew (a LinkedIn account on a new HeyReach channel, as `linkedin-outreach` → "Connect LinkedIn, step by step" says), or an email channel.
 - Get a workspace feature turned on where this workspace lacks one it needs: the HeyReach channel and its LinkedIn account method for LinkedIn, Profile enrichment and the built-in web tools for research. [Workspace features](../../README.md#workspace-features) says who changes them and how to tell. The Crew MCP cannot read the LinkedIn switch: with no HeyReach channel in `channels_list`, the user connects their LinkedIn account on the Channels page, and asks RudderStack only when that page offers no LinkedIn account.
 - Switch an Agent Live. `agent_update` refuses `live` on purpose.
 
