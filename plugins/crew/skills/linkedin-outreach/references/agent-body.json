@@ -56,7 +56,7 @@
     "maxActionsPerEntityPerWeek": 6
   },
   "scheduling": {
-    "triggerDelay": "0s"
+    "triggerDelay": "2m"
   },
   "followUp": {
     "enabled": false,
