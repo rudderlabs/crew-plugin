@@ -25,7 +25,7 @@ Read this before writing any agent content.
 | **Decide**  | Given that, what should happen? | Hard constraints, options, preference conditions |
 | **Act**     | How does it happen?             | Actions, channels, message generation, cadence   |
 
-Every decision is about one entity: one `userId`. For an Agent that decides per customer account (a health tier, the next onboarding step for a new customer), the account is that entity, and its tier is a Decide Option, not a signal: `account-agents.md`.
+Every decision is about one entity: one person (a `userId`), or, for an account Agent, one account. For an Agent that decides per customer account (a health tier, the next onboarding step for a new customer), the account is that entity, and its tier is a Decide Option, not a signal: `account-agents.md`, which also covers a workspace where account decisions is off.
 
 ## Observe: what earns a signal
 

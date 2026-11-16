@@ -1,6 +1,6 @@
 # Crew plugin for Claude
 
-[RudderCrew](https://crew.rudderstack.com) (Crew) decides, per person and on every event, what to do next and writes the message. This repo is Crew's plugin for Claude: one install connects Claude to your Crew workspace and adds the skills that set it up and build its Agents. Claude takes an Agent as far as Shadow, where it decides on real events and sends nothing, so your team reviews real decisions before anything reaches a customer.
+[RudderCrew](https://crew.rudderstack.com) (Crew) decides, per person or per account and on every event, what to do next and writes the message. This repo is Crew's plugin for Claude: one install connects Claude to your Crew workspace and adds the skills that set it up and build its Agents. Claude takes an Agent as far as Shadow, where it decides on real events and sends nothing, so your team reviews real decisions before anything reaches a customer.
 
 ## What you get
 
