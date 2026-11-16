@@ -46,7 +46,7 @@ Write the design back to the user in one short block: the entity and its id, the
 
 | Tool                                                                | Can                                                                                                                                                                                                                                              | Cannot                                                               |
 | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------- |
-| RudderCrew MCP                                                      | Create a webhook (`webhooks_create`), list webhooks, read what arrived (`catalog_list`, `catalog_get`), read and dry-run Agents, read decisions (`analytics_list`)                                                                               | Edit or revoke a webhook, or read its token again; read a warehouse  |
+| RudderCrew MCP                                                      | Create a webhook (`webhooks_create`), list webhooks, read what arrived (`catalog_list`, `catalog_get`), read and dry-run Agents, read decisions (`analytics_list`). For rows about accounts: read, save and delete account event rules (`accounts_listEventRules`, `accounts_saveEventRule`, `accounts_deleteEventRule`; the two writes need `webhooks:write`, as `webhooks_create` does) and read the accounts the rows made (`accounts_list`, `accounts_get`, which need `users:read`) | Edit or revoke a webhook, or read its token again; read a warehouse; turn on a workspace feature |
 | RudderStack MCP (`https://mcp.rudderstack.com/mcp`, OAuth)          | List Reverse ETL sources (`list_sources` with `retl_type`) with their warehouse account ids, list connections, read a destination, read sync runs (`get_retl_source_syncs`) and the rows a run's destination refused (`get_retl_failed_records`) | Create a source, a destination or a connection; start a sync         |
 | The RudderStack app                                                 | Everything, by a person, including adding the warehouse account and **Sync now**                                                                                                                                                                 |                                                                      |
 | Terraform, provider `rudderlabs/rudderstack` 5.x                    | Create the model source, the Webhook destination and the connection                                                                                                                                                                              | Start a sync                                                         |
@@ -57,7 +57,7 @@ The warehouse account (its credentials) lives in RudderStack. A person adds it i
 
 ## 1. Look at both sides, and start where things are
 
-**RudderCrew.** Confirm the workspace by name (`context_get`). Then `agent_list`, `webhooks_list` and `catalog_list`.
+**RudderCrew.** Confirm the workspace by name (`context_get`). Then `agent_list`, `webhooks_list` and `catalog_list`, and for rows about accounts `accounts_listEventRules`: a rule already saved for the event name decides what its rows do.
 
 **RudderStack.** `list_sources` with `retl_type: "all"`: an existing source on the same table or query, and its warehouse account id. `list_connections` and `get_destination` on any Webhook destination: one whose URL is a RudderCrew webhook's is a sync that already exists. `get_retl_source_syncs` on it shows whether it runs.
 
@@ -76,10 +76,14 @@ Every path runs step 2's Live check before the next sync, a reused connection in
 `agent_get` on the Agent that will decide on each row. Its trigger event name is the one fixed name every row is sent under, character for character, and must be one Crew accepts (`workspace-setup`'s `references/events-catalog.md` → "Events Crew refuses"): `Account Health Snapshot`, `Lead Score Updated`. Nothing else should send that name, so the Agent decides only on these rows.
 
 - **Rows about people** carry the person's own user id, the one the product sends, so a row joins what RudderCrew already knows about them.
-- **Rows about accounts** carry the account id with a prefix, `account:<id>`, so it never equals a person's id. `workspace-setup`'s `references/account-agents.md` covers the rest of an account Agent: one event per account per run, numbers as numbers, the tier as a Decide Option, guardrails per account.
+- **Rows about accounts** go one of two ways, by whether the workspace has account decisions on (`workspace-setup`'s `references/account-agents.md` → "Which path" says how to tell, and covers the rest of the Agent: the tier as a Decide Option, what its webhook posts, guardrails per account).
+  - **On:** an account Agent (`subject: "account"`) decides about the account, and an account event rule (step 3) names the event and the property that holds the account's id. The row carries that id as a property of its own, plain, with no prefix.
+  - **Off:** the fallback. An ordinary Agent decides on the account as if it were a person: the row's user id is the account id with a prefix, `account:<id>`, so it never equals a person's id, and no rule is saved.
+
+  The model in step 4 sends both columns, so the same sync serves either path.
 - **The Live check.** If any Live Agent triggers on that event name, stop: every row would start real sends. Pick a new name, or get the user's yes for that Agent. A Track connection sends only its track event, so Agents on `identify` are not reached; an Identify connection (pattern 4) arrives as `identify` and reaches every Agent triggered on it, so check those the same way.
 - **Pattern 4 (traits) has no Agent of its own.** The Agents that read the traits are the ones triggered on product events; this step is then only the `identify` check above.
-- Dry-run the Agent before any sync, on five hand-written rows with the same property names the model will send (`workspace-setup` step 4). The sync then only has to deliver what the dry run already showed.
+- Dry-run the Agent before any sync, on five hand-written rows with the same property names the model will send (`workspace-setup` step 4). The sync then only has to deliver what the dry run already showed. An account Agent's dry run names an account Crew already holds (`account-agents.md` → "Start with a dry run"); where the workspace has none yet, step 7's one-row sync with the Agent Off creates the first, and the dry run follows it.
 
 ## 3. Create the RudderCrew webhook
 
@@ -87,12 +91,32 @@ With the user's yes (a webhook can be revoked only in the RudderCrew app): `webh
 
 The answer holds `url` and `token`, once. Save them exactly as `connect-rudderstack` step 2 does: an empty 0600 file `~/crew-lists/webhooks/<webhookId>.env` filled with the Write tool (`CREW_WEBHOOK_URL=<url>` and `CREW_WEBHOOK_TOKEN=<token>`), never printed, never committed, never in a Terraform or rudder-cli file, never repeated in chat. Tell the user where it is.
 
+### For an account Agent: save the account event rule
+
+Only where account decisions is on and the Agent's subject is `account`. Do it after the webhook exists and before the first sync: until the rule is saved, a row is a person event, and it would create a person named after the account.
+
+Tell the user what the rule changes, then save it on their yes: from then on every event with this name on this webhook is about an account only. Crew ignores the user id on it, creates no person from it, and no person Agent runs on it. `agent_list` first: no person Agent should be triggered on the name.
+
+`accounts_saveEventRule` with:
+
+| Field       | Value                                                                                                                                                                                  |
+| ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `eventName` | The Agent's trigger, character for character                                                                                                                                           |
+| `webhookId` | The new webhook's id                                                                                                                                                                   |
+| `about`     | `account`                                                                                                                                                                              |
+| `keyKind`   | What the id column holds: `salesforce.account_id`, `hubspot.company_id`, or `source` for the warehouse's own account id. `account-agents.md` → "The account event rule" has the others |
+| `keyPath`   | `properties.<the plain id column>`: `properties.account_key` for the model below                                                                                                       |
+| `namePath`  | `properties.account_name`, if the model has the name. A new account is otherwise named after its id                                                                                    |
+
+It takes effect within about 15 seconds. `ACCOUNT_DECISIONS_OFF` means the feature is off: save nothing else, and take step 2's fallback. The other refusals, and `domainPath`, are in `account-agents.md`.
+
 ## 4. Write the model
 
 The SQL RudderStack runs on every sync. Write it, show it to the user, and run it through a warehouse MCP if one is connected (a count, and three sample rows); otherwise the user runs it and tells you the count. Lookout's `query_warehouse` refuses a query without a literal `LIMIT` on its outermost `SELECT`, so end every check with one (`LIMIT 1` on a count).
 
 - **One row per person or account**, with a unique, stable primary key: the id. A joined table with several rows per id (a row per week, per limit, per ticket) repeats the id: filter it to one row or aggregate it. Check it with `SELECT account_id FROM (<model>) GROUP BY 1 HAVING COUNT(*) > 1 LIMIT 1`, which must return nothing (on Snowflake the id is `"account_id"`, as the model quotes it).
 - **Ids as text.** `CAST(account_id AS VARCHAR)` (Snowflake, Redshift, Postgres) or `CAST(account_id AS STRING)` (BigQuery, Databricks). RudderCrew refuses a number user id with a 400.
+- **For rows about accounts, the id twice.** Once plain, as a property the rule reads (`account_key`), and once with the `account:` prefix, as the column the connection uses for its user identifier (`account_id`). A Reverse ETL connection needs a user identifier whatever the rows are about. With an account-only rule RudderCrew does not use it; on the fallback path it is the id the Agent decides on. A row whose plain id is empty is refused under a rule (a 400, shown as a failed record), so filter those rows out.
 - **Numbers as numbers**, so a signal can compare them: `active_users_7d`, not `'14 users'`.
 - **Property names in lower case.** RudderStack names each property after the column as the warehouse returns it. Snowflake returns an unquoted name in upper case, so `AS active_users_7d` arrives as `properties.ACTIVE_USERS_7D`: on Snowflake, double-quote each alias, `AS "active_users_7d"`. Elsewhere write the alias in lower case without quotes: BigQuery and Databricks quote names with backticks and read double quotes as a string. The SQL examples in this skill are Snowflake's.
 - **Dates as text properties**, such as `TO_VARCHAR(renewal_date, 'YYYY-MM-DD')`. Never map a timestamp onto the event's own timestamp: one with no time zone is refused with a 400.
@@ -105,6 +129,7 @@ An account snapshot, in Snowflake:
 ```sql
 SELECT
   'account:' || CAST(a.account_id AS VARCHAR) AS "account_id",
+  CAST(a.account_id AS VARCHAR) AS "account_key",
   a.account_name AS "account_name",
   a.plan AS "plan",
   a.seats AS "seats",
@@ -118,7 +143,7 @@ LEFT JOIN analytics.account_tickets t ON t.account_id = a.account_id
 WHERE a.is_customer
 ```
 
-It carries `renewal_date` as fixed text rather than a days-left count, which would change every day and, under Upsert, resend every row; the Agent counts the days itself.
+It carries `renewal_date` as fixed text rather than a days-left count, which would change every day and, under Upsert, resend every row; the Agent counts the days itself. `account_id` is the connection's user identifier and `account_key` the property an account event rule reads; on the fallback path `account_key` is one more property and can stay.
 
 ## 5. Choose how rows are sent
 
@@ -138,8 +163,8 @@ The connection's other settings:
 | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Event type      | Track (the app starts at identify); Identify for pattern 4                                                                                       |
 | Event name      | The Agent's trigger, fixed (not from a column); none for Identify                                                                                |
-| User identifier | `user_id`, from the id column                                                                                                                    |
-| Mappings        | Each column the Agent reads → `properties.<name>` (Track) or `traits.<name>` (Identify); the email column → `properties.email` or `traits.email` |
+| User identifier | `user_id`, from the id column (for rows about accounts, the prefixed `account_id`)                                                               |
+| Mappings        | Each column the Agent reads → `properties.<name>` (Track) or `traits.<name>` (Identify); the email column → `properties.email` or `traits.email`; for an account event rule, the plain id column → the property its `keyPath` names (`properties.account_key`) |
 | Schedule        | Manual until step 7 passes                                                                                                                       |
 | Failed records  | **Retain and show failures** on, so `get_retl_failed_records` can read the rows RudderCrew refuses; RudderStack leaves it unticked               |
 
@@ -171,6 +196,16 @@ Read it back before the first sync, whichever path made it: `get_source` on the 
 4. Check RudderCrew: `catalog_list` shows the trigger event under the new webhook, and `catalog_get` shows each property with the type the Agent expects (numbers as numbers). `analytics_list` for the Agent shows a decision for that id, within a few minutes.
 5. For rows about people that an Agent emails: `catalog_get` on the trigger event must show `properties.email` with the role `identifier`. RudderCrew sets that role in a background pass after an event first arrives, so the first rows can be decided with no recipient; if it is missing, the user marks it on the Events page.
 
+**For an account Agent**, checks 4 and 5 are these instead:
+
+- `catalog_list` shows the trigger event under the new webhook, and `catalog_get` shows each property with the type the Agent expects.
+- **The account appears.** `accounts_list` with `q` set to the account's name (or its id, when the rule has no `namePath`) finds it, and `accounts_get` shows the row's columns as `facts`. `lastAccountEventSkipped` lists any property Crew did not keep, with a reason: a contact detail, an array, a null or a very long string. Fix the model for any the Agent needs.
+- **The decision is on the account.** `analytics_list` for the Agent with `subject: "account"` shows one decision, and `accounts_get` lists the Agent among those that decided there.
+- **No person was created.** `users_list` shows no new person for the row (its user id would be the row's `account:<id>`). If one is there, the rule did not apply: read `accounts_listEventRules` and compare its `eventName` and `webhookId` with the connection's event name and the webhook, character for character.
+- A row RudderStack reports as failed with a 400 and `account_key_missing` or `account_key_invalid` had no usable id at the rule's `keyPath`: check the mapping of the plain id column, and that its values are ids of the rule's `keyKind`.
+
+`accounts_list`, `accounts_get` and `users_list` need `users:read`.
+
 Then put the full query back. The next sync sends every row not yet sent; for an entering-a-set model, that is everyone already in the set, unless the pattern's start-quiet plan is in place (`references/solution-patterns.md` → pattern 3).
 
 **For an Identify connection (pattern 4)** there is no Agent to move. Before the sync, `agent_list` shows every Agent triggered on `identify`: stop for a Live one, and expect a decision from a Shadow one. After the one-row sync, `users_get` on that person (it needs `users:read`) should show the new traits, and `analytics_list` should show no decision on `identify` unless one was meant.
@@ -194,9 +229,10 @@ The Agent stays in Shadow. Only a person takes it Live, in the RudderCrew app. B
 | What happens                                                                                                                  | What RudderStack does                                                                                                                                             | What to do                                                                                                                         |
 | ----------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
 | RudderCrew answers 400: an event name with another character, a number user id, a zoneless timestamp on the event's timestamp | Counts the row as failed and does not retry it in that run. With the connection's retry of failed records on, a later run sends it again, and it is refused again | Fix the model; `get_retl_failed_records` lists the rows                                                                            |
+| RudderCrew answers 400 with `account_key_missing` or `account_key_invalid`: under an account event rule, a row with no usable account id at the rule's `keyPath` | Counts the row as failed and does not retry it in that run | Map the plain id column to the property the rule reads; filter out rows with no id |
 | RudderCrew answers 401: a wrong or revoked token                                                                              | Every row fails                                                                                                                                                   | Fix the destination's header (a new webhook if the token is lost)                                                                  |
 | RudderCrew answers 429 or 5xx                                                                                                 | Retries for up to about three hours                                                                                                                               | Usually nothing; tell the RudderCrew contact if it lasts                                                                           |
-| Delivered, but no decision                                                                                                    | Reports success                                                                                                                                                   | The Agent is Off, the trigger name differs, or a guardrail held it: `analytics_list` with outcome `deduplicated` or `rate_limited` |
+| Delivered, but no decision                                                                                                    | Reports success                                                                                                                                                   | The Agent is Off, the trigger name differs, or a guardrail held it: `analytics_list` with outcome `deduplicated` or `rate_limited`. For an account Agent also: no rule matches the event's name and webhook (the row became a person event), or account decisions is off (the row is answered `ignored`) |
 
 The retry behaviour is RudderStack's documented policy for cloud destinations and Reverse ETL; the refusals are RudderCrew's ingest rules (`workspace-setup`'s `references/events-catalog.md` → "Events Crew refuses").
 
@@ -204,5 +240,6 @@ The retry behaviour is RudderStack's documented policy for cloud destinations an
 
 - **RudderCrew's half** was run for real with events shaped the way RudderStack's Webhook destination delivers a Reverse ETL row: the rows were accepted, the track triggered the Agent, a decision drafted from the row's columns, and each of the three 400s above was seen. The first track on a new webhook arrived before `properties.email` was marked as an identifier.
 - **The solution patterns** in `references/solution-patterns.md`: pattern 1 (a snapshot) is the shape that ran end to end. Patterns 2 to 5 are designs on the same tested mechanics; their own behaviour (a band changing under Upsert, an Identify connection writing traits, a row that leaves a set and returns) has not been run yet, nor has step 8's switch to Live with a replaced connection.
+- **The account event rule path** (an account Agent fed by a rule, steps 2, 3 and 7) is written from how RudderCrew documents its ingest, and has not been run end to end through a Reverse ETL sync. The fallback, the account as a person, is the shape that ran.
 - **The Terraform and rudder-cli specs** in `references/infrastructure-as-code.md` were checked against the provider's and the CLI's own source and docs (provider 5.0, rudder-cli 1.0), not applied.
 - **A full run, end to end**, on a Snowflake model of one account row, set up in the RudderStack app: the first sync succeeded with one row delivered and none failed; the row reached the RudderCrew webhook as `Account Health Snapshot`, every number typed as a number, with RudderStack's `context.sources` job ids beside the properties; and a Shadow account-health Agent decided Red about nine seconds later, its reasons quoting the row's numbers. A second **Sync now** with nothing changed read the row and sent nothing (Upsert). The same run found the app details in steps 4 to 6: upper-case Snowflake names, the identify default, the primary key and the disabled connection. The 400s above were not repeated in this run.
