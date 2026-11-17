@@ -64,8 +64,9 @@ to the <name> workspace; RudderStack is connected too"), then:
 
 - If the human only asked to set up, or asks what they can build: use the plugin's `get-started`
   skill. It says what is in their workspace and offers what to build. If that skill is not in
-  your skill list yet, offer three things to build, one of them reaching out to a list of people
-  they already have, and invite them to describe their own.
+  your skill list yet, offer what to build: outreach on LinkedIn or by email to a list of people
+  they already have, the right people at a list of companies, or follow-ups on what people do in
+  their product, and invite them to describe their own.
 - Otherwise go straight on with the task, using the plugin's skill that matches it:
   `workspace-setup` for building, fixing or testing any Agent, and for an empty or new
   workspace; `connect-rudderstack` to send their RudderStack events to Crew; `connect-warehouse`
