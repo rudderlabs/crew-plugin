@@ -7,16 +7,19 @@ name: self-approve
 # the PR author, because devbox-opened PRs are authored by an App and assigned
 # to the human.
 #
-# `pull_request_target`, not `pull_request`: the workflow and its allowlist are
-# read from main, so a PR cannot edit itself onto the list. The job checks out
-# nothing and restores no cache, so no PR code runs with this token.
+# `pull_request`: GitHub blocks `pull_request_target` in public repos from
+# 2 Dec 2026. The run uses the PR's own copy of this file, so the allowlist and
+# the `.github/` check are a convention among people with write access, not a
+# boundary: anyone who can push a branch can already run a workflow that
+# approves a PR. The job checks out nothing. Fork PRs get a read-only token,
+# so the job skips them.
 #
-# `.github/CODEOWNERS` and a required code-owner review rule on main enforce
-# human review for `.github/` changes, including pushes after bot approval.
-# Approval fails closed until that native merge protection is enabled.
+# `.github/CODEOWNERS` and the required code-owner review rule on main are the
+# boundary for `.github/`: a PR whose diff changes it needs a human code owner
+# to merge, whatever the bot approved. Approval fails closed until that rule
+# is enabled.
 on:
-  # zizmor: ignore[dangerous-triggers] -- no checkout, no PR-controlled input reaches a shell
-  pull_request_target:
+  pull_request:
     branches: [main]
     types: [labeled]
 
@@ -27,6 +30,7 @@ jobs:
     name: Approve on self-approve label
     if: >-
       github.event.label.name == 'self-approve'
+      && github.event.pull_request.head.repo.full_name == github.repository
       && contains(fromJSON('["cisse21","psrikanth88","gouthamnc","debanjan97","1abhishekpandey","dpatchigolla"]'), github.event.sender.login)
     runs-on: ubuntu-latest
     permissions:
