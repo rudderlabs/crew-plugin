@@ -56,6 +56,9 @@ Find the Agent with `agent_list` and call `calibrate_eligibility` with its `skil
   it), or time. Only when the event arrives, is sampled and still counts zero in `history` is a
   trigger condition filtering every event out; show the user which one. Dry-run the Agent meanwhile. `draft_incomplete` means the body is missing what `draft.missing` lists,
   which `workspace-setup` fixes. `setting_up` means Crew is still building the Agent; try again later.
+  `feature_locked` means Calibrate is closed for this workspace until the RudderStack team opens it
+  ([a workspace that starts with fewer features](../../README.md#a-workspace-that-starts-with-fewer-features));
+  say so, and dry-run the Agent meanwhile.
 
 ## 2. Start and wait for the deck
 
