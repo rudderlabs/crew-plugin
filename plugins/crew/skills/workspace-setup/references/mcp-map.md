@@ -34,7 +34,7 @@ An invited person joins as `member`; an admin promotes them under Settings → M
 | `read`    | Agent, decision, catalog and channel reads                                                                                             |
 | `write`   | Agent writes, dry runs and Calibrate                                                                                                   |
 | `people`  | Everything `write` has, plus people and enrichment results (`users_*`, `enrichment_preview`, ...), API connections and `webhooks_list` |
-| `setup`   | Everything `people` has, plus `webhooks_create`                                                                                        |
+| `setup`   | Everything `people` has, plus `webhooks_create` and the account event rule writes (`accounts_saveEventRule`, `accounts_deleteEventRule`) |
 | `reviews` | Reads, the decision actions (approve, edit and send, reject), and people reads; no Agent or webhook writes                             |
 
 ## Crew MCP
@@ -100,13 +100,14 @@ An invited person joins as `member`; an admin promotes them under Settings → M
 
 ### People, enrichments and accounts
 
-`users_list`, `users_get`, `enrichment_list`, `enrichment_get`, `enrichment_create`, `enrichment_update`, `enrichment_disable`, `enrichment_dependents`, `enrichment_preview`, `enrichment_refresh`, `enrichment_invalidate`, `enrichment_personResults`, `enrichment_getGeneration`, `enrichment_health`, `enrichment_suggestOutputs`, `accounts_list`, `accounts_get`
+`users_list`, `users_get`, `enrichment_list`, `enrichment_get`, `enrichment_create`, `enrichment_update`, `enrichment_disable`, `enrichment_dependents`, `enrichment_preview`, `enrichment_refresh`, `enrichment_invalidate`, `enrichment_personResults`, `enrichment_getGeneration`, `enrichment_health`, `enrichment_suggestOutputs`, `accounts_list`, `accounts_get`, `accounts_listEventRules`, `accounts_saveEventRule`, `accounts_deleteEventRule`
 
 - **A person's facts need `users:read`**: `users_list`, `users_get`, `enrichment_preview`, `enrichment_refresh`, `enrichment_personResults`, `enrichment_getGeneration`, `accounts_list` and `accounts_get`. It comes from the role over the sign-in, or from a token with the `people`, `setup` or `reviews` scope; a default `read` or `write` token answers `FORBIDDEN: Missing permission: users:read`. Reading and writing enrichment definitions needs only an Agent or people permission (`skills:*` or `users:*`).
 - `users_list` gives a person's `id`, which the enrichment tools take as `userPk`. `enrichment_preview` with `userPk` reuses that person's cached research (with `subject` it starts cold). A failed `enrichment_refresh` replaces the earlier result, good values included; `enrichment_invalidate` only marks it stale.
 - `enrichment_update` and `enrichment_disable` reach every Live Agent that names the enrichment at its next event, with no publish step: ask first, and read `enrichment_dependents` to say which Agents. `enrichment_health` shows how each enrichment's lookups went; `enrichment_suggestOutputs` is a model call that proposes outputs from a brief.
 - `accounts_list` and `accounts_get` are the companies the workspace's people are grouped into, where Accounts is on: ids, domains, people and the Agents that decided there. Read-only; every account write (merge, move, confirm, exclude a domain) stays in the app. An account id scopes `analytics_getAnalytics` (`accounts`) and is the sample `enrichment_preview` takes (`accountId`) for an enrichment whose `subject` is `account`.
-- Profile enrichment and Accounts are workspace features: [Workspace features](../../../README.md#workspace-features).
+- `accounts_listEventRules`, `accounts_saveEventRule` and `accounts_deleteEventRule` are the workspace's account event rules: which event names are about an account and where its id is. An account Agent (`subject: "account"`) receives only events whose name has one. The read needs any one of `users:read`, `skills:read` or `catalog:read`, so every role and token scope has it, and it answers whether or not account decisions is on. The two writes need `webhooks:write`: a role that can create webhooks, or a token with the `setup` scope. Saving a rule with `about: "account"` stops events of that name creating people and reaching person Agents, and deleting one reverses that: ask first, and say so. `account-agents.md` → "The account event rule" has the fields and refusals.
+- Profile enrichment, Accounts and Account decisions are workspace features: [Workspace features](../../../README.md#workspace-features).
 
 ### Calibrate
 
@@ -154,7 +155,7 @@ When an operation isn't available, diagnose before reacting. The three cases hav
 
 The capability exists; this sign-in or token lacks it. Retrying is pointless. Do the operation in the UI instead, or with a role or token that has it. Then tell the user exactly which permission was missing, so their workspace admin or Crew contact can fix it once.
 
-The common ones: `Missing permission: users:read` on a `users_*` tool or an enrichment tool that answers about a person, which on a token means it was minted without the `people` scope; and `Missing permission: webhooks:write` on `webhooks_create`, which on a token means it lacks the `setup` scope. Over the sign-in, either means the role lacks the slug: an admin changes the role.
+The common ones: `Missing permission: users:read` on a `users_*` tool or an enrichment tool that answers about a person, which on a token means it was minted without the `people` scope; and `Missing permission: webhooks:write` on `webhooks_create`, `accounts_saveEventRule` or `accounts_deleteEventRule`, which on a token means it lacks the `setup` scope. Over the sign-in, either means the role lacks the slug: an admin changes the role.
 
 **2. Expired auth** — `invalid_grant`, token refresh failure.
 

@@ -18,7 +18,7 @@ Answer these with the user before writing SQL. Each answer fixes one part of the
 
 | Question                                                                                                                 | Fixes                                                                                                                                                            |
 | ------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Who is the decision about?** A person, or a customer account                                                           | The id column: the person's product `user_id`, or `'account:' \|\| account_id`. An account Agent follows `workspace-setup`'s `references/account-agents.md`      |
+| **Who is the decision about?** A person, or a customer account                                                           | The id column: the person's product `user_id`. For an account, the plain id as a property an account event rule reads (`account_key`), beside `'account:' \|\| account_id` as the connection's user identifier. Where account decisions is off, that prefixed id is what the Agent decides on (the fallback). `workspace-setup`'s `references/account-agents.md` has both paths |
 | **What should prompt a decision?** Every run; a change; a row entering a set                                             | The pattern (1, 2 or 3), the sync mode (Full or Upsert) and which columns are mapped                                                                             |
 | **How fresh must it be?** Minutes, hours, a day, a week                                                                  | The schedule. The sync runs at most every 5 minutes; anything that must happen seconds after a user acts is a product event (`connect-rudderstack`)              |
 | **What does the Agent do with the row?** Message the person; tell a team; record a value                                 | The channel, and whether a row needs an email. A webhook or Slack action resolves no recipient; an email action needs `properties.email` on a row about a person |
@@ -31,15 +31,18 @@ Two facts shape every pattern. The **first sync of a connection sends every row 
 
 The SQL below is Snowflake's, with each alias double-quoted so it arrives in lower case (`SKILL.md` step 4). On BigQuery and Databricks drop those quotes, which make a string there.
 
+**Rows about accounts carry the id twice** (patterns 1, 2 and 5). `account_key` is the plain id: an account event rule reads it at `properties.account_key` (`SKILL.md` step 3), and an account Agent decides about that account. `account_id` is the same id with the `account:` prefix, mapped as the connection's user identifier, which a Reverse ETL connection needs whatever the rows are about. Under an account-only rule RudderCrew does not use it. Where account decisions is off there is no rule, and the prefixed id is the entity an ordinary Agent decides on: the fallback, with `account_key` as one more property.
+
 ## Pattern 1: A snapshot decided every run
 
 **Fits when the user says:** "every account should have a health tier", "renewal risk for every customer every week", "a Monday report on where each account stands". The decision's value is that it is current for everyone, including the accounts whose numbers did not move.
 
-- **Entity and id:** almost always the account, `account:<id>`. A person variant exists (a weekly engagement tier per user) but is rarer and much larger.
+- **Entity and id:** almost always the account: its plain id for the account event rule, and `account:<id>` as the user identifier (the entity itself on the fallback path). A person variant exists (a weekly engagement tier per user) but is rarer and much larger.
 - **Model:** one row per account, the facts the signals read, numbers as numbers.
 
 ```sql
 SELECT 'account:' || CAST(a.account_id AS VARCHAR) AS "account_id",
+       CAST(a.account_id AS VARCHAR) AS "account_key",
        a.plan AS "plan", a.seats AS "seats",
        u.active_users_7d AS "active_users_7d", u.active_users_prev_7d AS "active_users_prev_7d",
        t.open_tickets AS "open_tickets",
@@ -50,8 +53,8 @@ WHERE a.is_customer
 ```
 
 - **Sync mode:** Full. Upsert would skip the unchanged accounts, and their tier would go stale downstream. **Schedule:** the cadence of the decision, weekly or daily, as a cron in UTC. **Event name:** `Account Health Snapshot`.
-- **Agent:** `account-agents.md` end to end: one signal per aspect (usage trend, support load, commercial position), a Decide Option per tier with `whenNoClearFit: closest_action` so every account gets a tier, one webhook action per tier named for it (`health_red`), or a Slack action for the at-risk tier only. Once an account's event has matched a trigger, its events are kept 15 days, so a signal can compare this snapshot with last week's.
-- **Guardrails:** set under the sync interval or the defaults suppress runs: for daily, dedup `20h`, `2` per day, `7` or more per week; for weekly the defaults pass. Follow-ups off (`followUp.enabled: false`): the next snapshot is the next decision, and an Agent created without a `followUp` block has them on.
+- **Agent:** `account-agents.md` end to end: one signal per aspect (usage trend, support load, commercial position), a Decide Option per tier with `whenNoClearFit: closest_action` so every account gets a tier, one webhook action per tier named for it (`health_red`), or a Slack action for the at-risk tier only. An account Agent sees each fact's earlier values, so a signal can compare this snapshot with last week's; on the fallback path the account's events are kept 15 days once one has matched a trigger, which serves the same comparison.
+- **Guardrails:** set under the sync interval or the defaults suppress runs: for daily, dedup `20h`, `2` per day, `7` or more per week; for weekly the defaults pass. Follow-ups off (`followUp.enabled: false`): the next snapshot is the next decision. An account Agent with follow-ups on is refused when it is turned on; an ordinary Agent created without a `followUp` block has them on.
 - **Budget:** rows × runs. 2,000 accounts weekly is about 8,700 decisions a month; daily is about 60,000. A snapshot is the most expensive pattern per row of information, so weekly is the usual answer and daily needs a reason.
 - **The pitfall:** a daily snapshot under the default 72-hour dedup window records two days in three as `deduplicated`, and the receiver's table looks like the Agent stopped. Check the first week's decisions for `deduplicated` and `rate_limited` before trusting the downstream table.
 
@@ -64,6 +67,7 @@ WHERE a.is_customer
 
 ```sql
 SELECT 'account:' || CAST(account_id AS VARCHAR) AS "account_id",
+       CAST(account_id AS VARCHAR) AS "account_key",
        CASE WHEN active_users_7d < 0.5 * active_users_prev_7d THEN 'falling_fast'
             WHEN active_users_7d < 0.8 * active_users_prev_7d THEN 'falling'
             WHEN active_users_7d > 1.2 * active_users_prev_7d THEN 'growing'
@@ -75,7 +79,7 @@ FROM account_usage_weekly WHERE is_customer
 ```
 
 - **Sync mode:** Upsert. **Schedule:** as often as the bands are rebuilt, usually daily. **Event name:** `Account Usage Changed`, `Lead Score Band Changed`.
-- **Agent:** signals read the band; Options per band worth acting on, `whenNoClearFit: hold_off` so a change into `steady` holds. For direction, the previous event in the entity's window works only while it is under 15 days old. When direction matters beyond that, keep a band-history table and map `previous_band`, the band before the current one, which changes only when the band does. Never map last run's band: it changes one run after the band does, so every change costs two decisions.
+- **Agent:** signals read the band; Options per band worth acting on, `whenNoClearFit: hold_off` so a change into `steady` holds. For direction, an account Agent sees each fact's earlier values; for a person Agent, or an account on the fallback path, the previous event in the entity's window works only while it is under 15 days old. When direction matters beyond that, keep a band-history table and map `previous_band`, the band before the current one, which changes only when the band does. Never map last run's band: it changes one run after the band does, so every change costs two decisions.
 - **Guardrails:** a change the guardrails suppress is not retried. Under Upsert the row is not sent again until it changes again, so a second band change inside the deduplication window is recorded as `deduplicated` and lost. Keep the window shorter than the time between two changes that both matter, or accept that the later one is dropped. Follow-ups per the use case.
 - **Budget:** rows that change band per run × runs, plus every row on the first sync. With well-chosen bands a few percent of rows change per day; a band cut too fine behaves like Full.
 - **The pitfall:** one column that moves every run, `days_to_renewal`, `last_seen_at`, `snapshot_date`, `updated_at`, turns Upsert into Full. Leave such columns out of the model itself, not only out of the mapping: a test run showed that an unchanged row is not sent again, but not whether RudderStack compares the mapped columns or the whole row. Keep dates as fixed text (`renewal_date`), and let the Agent count days from them.
@@ -114,7 +118,7 @@ A user near two limits is still one row, its `limits_near` listing both in a fix
 **Fits when the user says:** "the agent should know each user's plan and ARR, but that lives in the warehouse", "our events don't carry the CSM owner", "accounts have a tier and the people at them should be treated by it". The facts are not a reason to act; they should be in front of Agents that decide on product events.
 
 - **Entity and id:** the person, under the `user_id` the product sends; anything else writes traits onto a profile no event reaches.
-- **Model:** one row per person with the facts as columns. **Account facts are denormalized onto each person's row** (`account_tier`, `account_arr`, `csm_owner`): a Reverse ETL connection sends identify or track, never a group call, so there is no account record to attach them to.
+- **Model:** one row per person with the facts as columns. **Account facts are denormalized onto each person's row** (`account_tier`, `account_arr`, `csm_owner`): an identify writes onto the person it names, never onto an account. (Facts on the account itself come from an account event: pattern 1.)
 
 ```sql
 SELECT CAST(u.user_id AS VARCHAR) AS "user_id", u.plan AS "plan", u.seats AS "seats",
@@ -139,6 +143,7 @@ For facts an **account Agent** should see, do not use this pattern: put them on 
 
 ```sql
 SELECT 'account:' || CAST(account_id AS VARCHAR) AS "account_id",
+       CAST(account_id AS VARCHAR) AS "account_key",
        CASE WHEN churn_probability >= 0.7 THEN 'high'
             WHEN churn_probability >= 0.4 THEN 'medium' ELSE 'low' END AS "churn_band",
        top_driver_at_band_change AS "top_driver"
@@ -148,7 +153,7 @@ FROM churn_predictions_latest
 - **Sync mode:** Upsert. **Schedule:** a cron after the scoring job finishes, so a half-written table is never read. **Event name:** `Churn Risk Band Changed`, `Lead Score Qualified`.
 - **The driver:** a model's `top_driver` can change while the band stays put, and each change sends the row again. Take it from the night the band last changed (a band-history table, as in pattern 2), so it moves only with the band; or leave it out, or count its changes in the budget.
 - **Agent:** the score is a reading the data team already made, so one signal restating it adds nothing (`oda-design.md` → "what earns a signal"). The Agent's work is what to do about it: Options per band, with the model's `top_driver` as the thing the message or the Slack post is about. Account scores follow `account-agents.md`.
-- **Guardrails:** as pattern 2: a band change the deduplication window suppresses is lost under Upsert, so keep the window shorter than the time between two band changes that both matter. Follow-ups off for an account Agent; per the use case for a person Agent.
+- **Guardrails:** as pattern 2: a band change the deduplication window suppresses is lost under Upsert, so keep the window shorter than the time between two band changes that both matter. Follow-ups off for an Agent that decides about accounts, on either path; per the use case for a person Agent.
 - **Budget:** band changes per night × 30, plus every row once. A model that flips many rows between bands every night is noise upstream; widen the bands, or score weekly.
 - **The pitfall:** the scoring job rebuilds its table and the sync reads it mid-write, or reads an empty table, and the next run may then send every row as new (not checked in a test run). Read from a `_latest` view the job swaps atomically, and schedule the sync after the job's usual finish time.
 
