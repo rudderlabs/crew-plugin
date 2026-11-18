@@ -14,6 +14,7 @@ An Agent that should decide once per customer account, such as a health tier per
 - [The account Agent's body](#the-account-agents-body)
 - [Start with a dry run](#start-with-a-dry-run)
 - [Act through a webhook, one action per tier](#act-through-a-webhook-one-action-per-tier)
+- [Post once, then only on a change](#post-once-then-only-on-a-change)
 - [Guardrails count per account](#guardrails-count-per-account)
 - [When the people matter too](#when-the-people-matter-too)
 - [Without account decisions: the account as a person](#without-account-decisions-the-account-as-a-person)
@@ -33,6 +34,7 @@ Never save a rule to find out: create the Agent first. A rule saved for an accou
 **One event per account per run**, under one fixed name such as `Account Health Snapshot`, with the account's facts as properties: plan, seats, active users this week and last, open support tickets, the renewal date, the onboarding milestones reached and when. A scheduled RudderStack Reverse ETL sync from a warehouse table, or from a RudderStack Profiles table, sends one row per account: the `connect-warehouse` skill sets it up. For a tier on every account every run, the sync's mode is Full: Upsert sends only the accounts whose numbers changed, so an unchanged account would keep last week's tier.
 
 - **Numbers as numbers, dates as properties.** Send `active_users_7d: 14`, not `"14 users"`. A date goes in a property (`renewal_date: "2027-03-01"`), never onto the event's own timestamp; a timestamp with no time zone is refused with a 400 that a RudderStack Webhook destination does not retry.
+- **Dates, not day counts.** Send `renewal_date` and `last_activity_date`, not `days_to_renewal` or `days_since_last_activity`: a count is stale the day after it is computed and changes every row every day. Each fact reaches the Agent with the day Crew recorded it, so tell the Agent in its prompt to take the newest of those days as today and to count days from it, and have the message show the count ("renews 2026-12-29 (41 days)"). In a test on fifteen sample accounts over two rounds, every tier and every day count in a message was right.
 - **Roll person events up in the warehouse.** Milestone events from a product's event stream carry a person's id. Count them per account in the table the sync reads (`milestones_reached`, `first_data_at`), so the event carries the account's progress.
 - **Leave personal contact details off.** An account event needs no email. An action that writes to a webhook or to Slack resolves no recipient.
 
@@ -84,7 +86,7 @@ An event whose name has a rule, on a webhook of either format:
 
 1. **Finds the account by its id, or creates it.** A `domain` id creates an account only while the workspace groups people by company domain; a free-mail domain or one the workspace excluded never forms an account, and the event is ignored (`unknown_account`).
 2. **Stores the event's properties as facts on the account**, each dated when Crew received it. A nested object is flattened (`usage.seats`). The rule's own fields (the id, name and domain) are identifiers, not facts. A property that is a contact detail, an array, a null, an empty string or a very long string is not kept, and neither is one past the per-event or per-account fact limits. The answer lists each one under `skipped` with its path and a reason, and `accounts_get` shows the newest event's list as `lastAccountEventSkipped`. A fact the event stops sending stays.
-3. **Queues one decision for each running account Agent triggered on that name.** There is no change check: an unchanged event is decided again, and the Agent's guardrails are what hold a repeat.
+3. **Queues one decision for each running account Agent triggered on that name.** There is no change check: an unchanged event is decided again, and the Agent's guardrails are what hold a repeat. To keep an Agent from telling the team the same thing on every run, see [Post once, then only on a change](#post-once-then-only-on-a-change).
 
 What the sender sees:
 
@@ -114,7 +116,7 @@ With `about: "account"` the event needs no user id at all. A Reverse ETL connect
 
 ## Start with a dry run
 
-`preview_tryEvent` on an account Agent takes the account's `accountId` (from `accounts_list`), the `eventName` and its `properties`, and no person field. The account has to exist in Crew: one Crew does not have answers `NOT_FOUND`. The answer carries an `accountSnapshot`: the facts, their earlier values, the people count and the gaps Decide saw. Nothing is sent and no decision is written.
+`preview_tryEvent` on an account Agent takes the account's `accountId` (from `accounts_list`), the `eventName` and its `properties`, and no person field. The account has to exist in Crew: one Crew does not have answers `NOT_FOUND`. The answer carries an `accountSnapshot`: the facts, their earlier values, the people count and the gaps Decide saw. Nothing is sent and no decision is written. The account's stored facts stay in the snapshot beside the properties the dry run passes, so a column the model has since dropped is still there: to test a changed set of columns, dry-run on an account that never held the old ones.
 
 - **Where Accounts already holds companies**, pick five from `accounts_list` (a healthy one, a falling one, one near renewal, one new and stalled, one with thin data), write each one's properties by hand, and dry-run them in one `preview_tryEvent` call. Agree the tiers with the user, then build the sync with the same property names (the `connect-warehouse` skill).
 - **Where no account exists yet**, the first events create them. Save the rule, keep the Agent Off, and send one row (`connect-warehouse` step 7): the account appears in `accounts_list` with its facts, and no decision is made. Dry-run on that account, then move the Agent to Shadow with the user's yes.
@@ -141,6 +143,17 @@ Typical receivers: a small endpoint that upserts `(account id, tier, decided at,
 To send a short reason or a next step with the tier, list them as the action's `payloadTemplate.outputFields` (plain text, one value each) with message instructions that say what each holds (`act-writing.md`). Without message instructions an action generates nothing, which is fine for a webhook that only records the tier.
 
 A Shadow Agent posts nothing. Review its tiers on the account's page or the Decisions page, or with `analytics_list` (`subject: "account"`), before a person takes it Live; the receiver sees its first call only then.
+
+## Post once, then only on a change
+
+A Full sync sends every account on every run, so an Agent that alerts on a Red account would alert on it again each time. Guardrails can only space the repeats out. Decide sees this Agent's own earlier decisions about the account, so the Agent can hold the repeat itself:
+
+- **Give it one quiet action for "nothing new"**, a webhook action such as `no_change_recorded` whose one field says the tier, when it was set and that the facts behind it have not moved. It is a real action, so the decision is recorded and the receiver's table stays current.
+- **Say when to choose it, in Decide.** "Check this account's earlier decisions first. If the last one had the same tier and the facts behind it have not moved, choose No change, whatever the tier. Decide afresh when the tier would change, when the renewal comes inside 90 days, or when a fact behind the call moved by a real amount, such as active users by a tenth or more, a new ticket or a new note. A date coming one day closer is not a change. With no earlier decision, decide as if it were the first time."
+
+In a test on fifteen sample accounts, a second run with the same facts chose No change for all fifteen over two rounds, and a run where four accounts' facts moved decided those four afresh. Without the rule an Agent written as one Decide strategy avoided repeating itself by calling an already-flagged account healthy, which is wrong: give it the quiet action.
+
+A dry run on an account that already has a decision follows the same rule, so it can answer No change. To see a first-time call, dry-run on an account with no decisions yet.
 
 ## Guardrails count per account
 
