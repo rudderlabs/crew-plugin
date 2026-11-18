@@ -49,6 +49,8 @@ sed -n 's/^CREW_WEBHOOK_URL=//p' ~/crew-lists/webhooks/<webhookId>.env | pbcopy
 sed -n 's/^CREW_WEBHOOK_TOKEN=/Bearer /p' ~/crew-lists/webhooks/<webhookId>.env | pbcopy
 ```
 
+Where the list offers no Webhook type, the workspace has not had it opened yet ([a workspace that starts with fewer features](../../../README.md#a-workspace-that-starts-with-fewer-features)): the hand-off cannot be built until the RudderStack team opens it, so say so and stop here.
+
 Then `channels_list` for the new channel's id: that is `<LOOPBACK_CHANNEL_ID>` in the Expand body. A workspace that already has a webhook channel named like a loopback may reuse it, but only once the user has opened it in Settings → Channels and checked it: the URL is this webhook's (its `CREW_WEBHOOK_URL`, which ends in the id in the file's name) and the `Authorization` header is set again from the file, since the MCP shows neither a channel's URL nor its headers. The name proves nothing. Shadow never posts through the channel and the replay posts with the file directly, so a channel pointing at an old webhook passes every check before Live and is found out only by Live Expand's first decision, which SKILL.md step 9 checks for that reason.
 
 ## 3. The lead event name

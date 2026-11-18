@@ -122,7 +122,7 @@ By design: creating a workspace or inviting people, turning an Agent Live or pub
 
 ## Workspace features
 
-Some capabilities are switched per workspace and are not self-serve: Profile enrichment, the built-in web tools, the HeyReach channel, Crew's own RudderStack link, learning and more. The plugin README's [Workspace features](../../../README.md#workspace-features) table lists each one, whether a new workspace has it, and how to tell from Claude whether it is on. When the user needs one that is off, name it and say who changes it, as that table does; don't look for a way around it. None is needed to get an Agent deciding in Shadow (`SKILL.md` → Stage 3 says when to raise them).
+Some capabilities are switched per workspace and are not self-serve: Profile enrichment, the built-in web tools, the HeyReach channel, Crew's own RudderStack link, learning and more. The plugin README's [Workspace features](../../../README.md#workspace-features) table lists each one, whether a new workspace has it, and how to tell from Claude whether it is on. When the user needs one that is off, name it and say who changes it, as that table does; don't look for a way around it. A new workspace can also start with custom MCP tools, API connections, the `webhook` channel and Calibrate closed: the section under that table says what a refusal looks like and what to do. None is needed to get an Agent deciding in Shadow (`SKILL.md` → Stage 3 says when to raise them).
 
 ## RudderStack MCP
 

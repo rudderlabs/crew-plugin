@@ -57,6 +57,17 @@ Some of what the skills use is a feature switched per workspace. The RudderStack
 | **Learning**: proposals that improve an Agent from its outcomes. Needs Crew's own RudderStack link too                                    | `learning`                | off     | Not readable over MCP                                                                                                                                                                                    |
 | **Warehouse facts**: workspace facts explored from the warehouse Crew's RudderStack link feeds                                            | `world-model`             | off     | Not readable over MCP                                                                                                                                                                                    |
 
+### A workspace that starts with fewer features
+
+A new workspace can start with part of the product closed, whatever the table above says, until the RudderStack team opens it after a call with the user. Closed until then:
+
+- **Custom MCP tools and API connections**, for Agents and for enrichments. `mcp_listTools` lists only the built-in tools. An enrichment can still be research with the built-in web tools, or a lookup.
+- **The `webhook` channel**, the one that posts a decision to a URL. The Channels list does not offer the Webhook type. Incoming webhooks are not affected.
+- **Calibrate.** `calibrate_eligibility` answers `calibrate: "feature_locked"`.
+- **Learning and Warehouse facts.**
+
+A skill cannot read this ahead of time. It learns it from the refusal: a tool answers `FORBIDDEN` with `code: FEATURE_LOCKED` and a `feature` line naming what is closed. A write that would leave an Agent in Shadow or Live while its body uses a closed tool or channel is refused the same way, so take that tool or action out of the body, or leave the Agent Off. Handle it as a feature that is off: name what is closed, tell the user their RudderStack contact opens it, and carry on with what works.
+
 ## Adding a skill
 
 One PR under `plugins/crew/skills/<name>/`. Before it merges:
