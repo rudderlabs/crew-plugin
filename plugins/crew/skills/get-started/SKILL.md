@@ -37,7 +37,7 @@ Offer these four, in the person's words, plus their own. Where your client has a
 
 Always end with: **or tell me in a sentence or two what you want it to do.**
 
-Say one line under the list: every Agent starts in Shadow, where it decides and writes drafts but sends nothing, and only they can switch it Live.
+Say one line under the list: every new Agent is created Off; with their yes it moves to Shadow, where it decides and writes drafts but sends nothing, and only they can switch it Live.
 
 Keep the whole message to the list and that line. Scoring leads, account health and reviewing an existing Agent are real options too: bring one up only when what the person said points to it.
 
