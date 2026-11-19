@@ -14,6 +14,7 @@ An Agent that should decide once per customer account, such as a health tier per
 - [The account Agent's body](#the-account-agents-body)
 - [Start with a dry run](#start-with-a-dry-run)
 - [Act through a webhook, one action per tier](#act-through-a-webhook-one-action-per-tier)
+- [Telling the account's owner](#telling-the-accounts-owner)
 - [Post once, then only on a change](#post-once-then-only-on-a-change)
 - [Guardrails count per account](#guardrails-count-per-account)
 - [When the people matter too](#when-the-people-matter-too)
@@ -105,7 +106,7 @@ With `about: "account"` the event needs no user id at all. A Reverse ETL connect
 
 `agent_bodySchema` lists the rules an account body must meet. They are checked when the Agent is turned on or published onto, not while it is an Off draft:
 
-- **Slack and webhook actions only.** An account Agent messages nobody at the account. A Slack destination is a channel, never a person or a direct message.
+- **Slack and webhook actions only.** An account Agent messages nobody at the account. A Slack destination is a channel or the account's owner ([Telling the account's owner](#telling-the-accounts-owner)), never a person at the account.
 - **No follow-ups, no trigger delay.** Write `followUp: {"enabled": false, "count": 1, "gapDays": 1}` and `scheduling.triggerDelay: "0s"`. The next event is the next decision.
 - **No `accountContext` and no per-action `account` limits.** Both belong to a person Agent; an account Agent always sees its account.
 - **Tools and enrichments.** `agentToolNames` may name any tool but `identify_visitor_company`. `enrichmentIds` may name only enrichments whose subject is `account`.
@@ -144,14 +145,24 @@ To send a short reason or a next step with the tier, list them as the action's `
 
 A Shadow Agent posts nothing. Review its tiers on the account's page or the Decisions page, or with `analytics_list` (`subject: "account"`), before a person takes it Live; the receiver sees its first call only then.
 
+## Telling the account's owner
+
+"Tell the account manager when one turns Red" needs the owner on the account, and then one of two ways to reach them. This section is read from `agent_bodySchema` and the rule tool's own description; it has not been run in a test here.
+
+- **The owner comes from the rule.** `accounts_saveEventRule` takes an `ownerPath`: the property that holds the account's owner, as an email address or a Slack member id (`properties.owner_email`). Crew stores it on the account and leaves that property out of the facts. A later event with a different owner replaces it; an event without one keeps it. Send the owner as a column of its own, and keep the owner's name in another column if the message should show it.
+- **Mention the owner in a channel post.** `tagAccountOwner: true` on the Slack action's policy: a Live post starts with a mention of the owner. With no owner stored, or one Slack cannot find, the post goes out untagged.
+- **Or message the owner directly.** A Slack action whose `destinationId` is `crew:slack:account-owner` sends a direct message in place of a channel post. It fails when the account has no owner yet, and a person cannot take the Agent Live until the Slack app can look people up by email (`agent_bodySchema` names the refusal).
+
 ## Post once, then only on a change
 
 A Full sync sends every account on every run, so an Agent that alerts on a Red account would alert on it again each time. Guardrails can only space the repeats out. Decide sees this Agent's own earlier decisions about the account, so the Agent can hold the repeat itself:
 
 - **Give it one quiet action for "nothing new"**, a webhook action such as `no_change_recorded` whose one field says the tier, when it was set and that the facts behind it have not moved. It is a real action, so the decision is recorded and the receiver's table stays current.
-- **Say when to choose it, in Decide.** "Check this account's earlier decisions first. If the last one had the same tier and the facts behind it have not moved, choose No change, whatever the tier. Decide afresh when the tier would change, when the renewal comes inside 90 days, or when a fact behind the call moved by a real amount, such as active users by a tenth or more, a new ticket or a new note. A date coming one day closer is not a change. With no earlier decision, decide as if it were the first time."
+- **Say when to choose it, in Decide.** "Check this account's earlier decisions first. If the last one had the same tier and the facts behind it have not moved, choose No change, whatever the tier. Decide afresh when the tier would change, on the run where the renewal first comes inside 90 days, or when a fact behind the call moved by a real amount, such as active users by a tenth or more, a new ticket or a new note. A date coming one day closer is not a change. With no earlier decision, decide as if it were the first time."
 
 In a test on fifteen sample accounts, a second run with the same facts chose No change for all fifteen over two rounds, and a run where four accounts' facts moved decided those four afresh. Without the rule an Agent written as one Decide strategy avoided repeating itself by calling an already-flagged account healthy, which is wrong: give it the quiet action.
+
+Three things to plan for. A receiver that writes the tier from the action's name keeps the tier it has when this action arrives. Decide lists only the Agent's recent decisions about the account (ten of them, from the last thirty days, by default), so have the quiet action's field restate the tier, which is what carries it from one run to the next. And two cases were not tested: the fallback path, and the first run after a person takes the Agent Live, when every earlier decision is a Shadow one that told nobody. Read that run's decisions; if it held alerts back, add to the rule that a decision made in Shadow posted nothing.
 
 A dry run on an account that already has a decision follows the same rule, so it can answer No change. To see a first-time call, dry-run on an account with no decisions yet.
 
