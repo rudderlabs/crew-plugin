@@ -22,8 +22,16 @@ SKILL_SCRIPTS = ("skills", "workspace-setup", "scripts")
 
 
 def body_of(event):
-    body = (event.get("tool_input") or {}).get("body")
-    return body if isinstance(body, dict) else None
+    """The body just written. agent_create and draft_createNew take the Agent's subject beside the
+    body, so it is carried onto a body that does not state one: check_body.py reads it there."""
+    tool_input = event.get("tool_input") or {}
+    body = tool_input.get("body")
+    if not isinstance(body, dict):
+        return None
+    subject = tool_input.get("subject")
+    if isinstance(subject, str) and "subject" not in body:
+        body = dict(body, subject=subject)
+    return body
 
 
 def report_checks(event):
