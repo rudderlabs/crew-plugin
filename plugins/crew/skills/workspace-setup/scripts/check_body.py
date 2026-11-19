@@ -29,6 +29,10 @@ It also warns about things that pass every check and still go wrong:
   - on a webhook that names its own fields, instructions asking for HTML tags:
     those fields are plain text, and the writer is told so.
   - requiredOutputFields on a channel other than a webhook, which ignores it.
+  - on an account Agent (subject "account"), what turning it on refuses: a
+    channel other than slack or webhook, a Slack person or direct message as
+    the destination, follow-ups, a trigger delay, accountContext, per-action
+    account limits and the identify_visitor_company tool.
 
 It names a requiredOutputFields entry missing from outputFields too, which the
 server refuses outright, so the fix is obvious before the write.
@@ -53,6 +57,10 @@ TEXT_FIELD_KEYS = {"subject", "subject_line", "preheader", "preview_text"}
 STATIC_FIELD_CHANNELS = {None, "webhook"}  # plain-text and templated channels set each field's format themselves
 HTML_TAGS = re.compile(r"<(p|br|ul|ol|li|strong|em|a)\b", re.IGNORECASE)
 # A Markdown heading, bullet or numbered line. "**bold**" doesn't match: bold survives flattening.
+ACCOUNT_CHANNEL_TYPES = {"slack", "webhook"}  # the only channels an account Agent (subject "account") may use
+SLACK_PERSON_PREFIXES = ("U", "W", "D")  # a Slack user or direct-message id, which an account Agent may not post to
+ZERO_DELAY = re.compile(r"^\s*0+\s*[a-z]*\s*$")
+VISITOR_COMPANY_TOOL = "identify_visitor_company"
 STRUCTURE_LINE = re.compile(r"^[ \t]*(#{1,6}[ \t]|[-*+][ \t]|\d{1,3}[.)][ \t])", re.MULTILINE)
 
 
@@ -104,6 +112,38 @@ def structure_line(text):
         return None
     line = text[match.start():].split("\n", 1)[0].strip()
     return line if len(line) <= 40 else line[:40] + "…"
+
+
+def account_errors(body, policies, ids):
+    """Mirror what turning on an account Agent (subject "account") refuses. A person body has none."""
+    if body.get("subject") != "account":
+        return []
+    found = []
+    refused = "turning the agent on will refuse it. See account-agents.md, 'The account Agent's body'."
+    for p, pid in zip(policies, ids):
+        label = f"action '{p.get('action') or pid}'"
+        channel_type = p.get("channelType")
+        if channel_type and channel_type not in ACCOUNT_CHANNEL_TYPES:
+            found.append(f"{label}: an account Agent can use only a slack or webhook channel, not "
+                         f"'{channel_type}'; {refused}")
+        destination = p.get("destinationId")
+        if channel_type == "slack" and isinstance(destination, str) and destination[:1] in SLACK_PERSON_PREFIXES:
+            found.append(f"{label}: an account Agent posts to a Slack channel, never to a person or a direct "
+                         f"message ('{destination}'); {refused}")
+        if "account" in p:
+            found.append(f"{label}: an account Agent cannot have per-action account limits; {refused}")
+    if (body.get("followUp") or {}).get("enabled") is True:
+        found.append(f"followUp is on, and an account Agent cannot have follow-ups; set enabled to false; {refused}")
+    delay = (body.get("scheduling") or {}).get("triggerDelay")
+    if isinstance(delay, str) and ZERO_DELAY.match(delay) is None:
+        found.append(f"scheduling.triggerDelay is '{delay}', and an account Agent cannot have a trigger delay; "
+                     f"set it to '0s'; {refused}")
+    if "accountContext" in body:
+        found.append(f"accountContext is set; an account Agent always sees its account and cannot have it; {refused}")
+    if VISITOR_COMPANY_TOOL in (body.get("agentToolNames") or []):
+        found.append(f"agentToolNames names {VISITOR_COMPANY_TOOL}, which needs a visitor and an account event "
+                     f"has none; {refused}")
+    return found
 
 
 def check(body):
@@ -251,6 +291,8 @@ def check(body):
     window = body.get("attributionWindowDays")
     if fu.get("enabled") and window and fu.get("gapDays") and fu["gapDays"] > window:
         errors.append(f"followUp.gapDays {fu['gapDays']} is longer than attributionWindowDays {window}.")
+
+    errors.extend(account_errors(body, policies, ids))
 
     tools = body.get("agentToolNames") or []
     if tools:
