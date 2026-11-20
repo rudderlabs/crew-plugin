@@ -1,7 +1,7 @@
 ---
 name: linkedin-campaign
 description: Runs a LinkedIn outbound campaign end to end with Crew - finds and verifies real leads with treg, creates the launch's HeyReach campaigns through the HeyReach MCP, gives each lead a LinkedIn member id so Crew research enrichments can personalise, then builds, dry-runs and Shadows one Crew Agent over HeyReach through the linkedin-outreach skill. Use when someone wants Crew to find the leads for a LinkedIn campaign for a product or launch, or to set up research enrichments on LinkedIn-only leads. When they already have the people (a CSV, a CRM export, their own connections or warm contacts), use linkedin-outreach instead, even when they call it lead generation.
-compatibility: Claude Code with a shell; the Crew MCP on the user's workspace; the sibling skills linkedin-outreach and send-list; a HeyReach MCP or API key for campaigns. Only once it finds leads (step 2), and checked then: Python 3, jq and treg.
+compatibility: Claude Code with a shell; the Crew MCP on the user's workspace; the sibling skills linkedin-outreach and send-list; a HeyReach MCP or API key for campaigns only on the team's own HeyReach (a LinkedIn account connected in Crew needs neither). Only once it finds leads (step 2), and checked then: Python 3, jq and treg.
 ---
 
 # LinkedIn campaign with Crew
@@ -97,7 +97,10 @@ file under `~/crew-lists/webhooks/` (step 6).
    shell command that runs its treg calls in parallel and prints one table. Call the endpoints it
    lists directly; `catalog_search` only when one fails. For a demo, use its Demo mode: one
    command, about a minute. Write
-   `leads.csv`: `name,linkedin_url,title,company,company_domain[,talking_point]`.
+   `leads.csv`: `name,linkedin_url,title,company,company_domain[,talking_point]`. Take
+   `company_domain` only from a source in this run (a search result, the job post, the company's
+   LinkedIn page), never from memory; leave it blank when none gave it. Research reads it, so a
+   wrong domain sends research to the wrong company.
 3. **Verify.** Stage 2 runs `lookup_profiles.py` on every candidate: it confirms each current role
    and country and fetches the LinkedIn `memberId`. Keep only `CURRENT` rows (people leave and Google
    snippets lag: one "Head of CRM" had left a month earlier, and 2 of 14 candidates in the second run
@@ -148,8 +151,9 @@ file under `~/crew-lists/webhooks/` (step 6).
    while its file is on this machine.
 
 7. **Enrichments.** [references/enrichments.md](references/enrichments.md): preview each definition
-   on two leads with `subject.externalIds = {"linkedin.member_id": "<id>"}`, show the result, then
-   `enrichment_create`.
+   on two leads with `subject.externalIds = {"linkedin.member_id": "<id>"}`, then `enrichment_create`
+   without stopping: the yes before step 6 covers it, so the list of writes says "created after a
+   preview", never "shown to you first". Show the previews with the Dry Run (step 10).
 8. **Agent.** linkedin-outreach step 5: fill its `references/agent-body.json` with the step-5
    campaign ids, both enrichment ids in `enrichmentIds`, and the copy rules in
    [references/agent-copy.md](references/agent-copy.md) (meeting times stay a Reply prompt rule; as a
