@@ -115,6 +115,14 @@ An invited person joins as `member`; an admin promotes them under Settings → M
 
 - The `calibrate` skill runs a Calibrate round by round; `calibrate_publish` publishes to Shadow only. `calibrate_liveGate` says what would stop each action sending Live, for the person who takes the Agent Live.
 
+### Product docs
+
+`docs_ask`, `docs_get`
+
+- `docs_ask` answers one question from RudderCrew's public docs and names the pages it used. `isUncertain: true` means the docs did not clearly answer: read the `sources` with `docs_get` or tell the user, never guess. Each call runs a model on RudderCrew's side and takes a few seconds.
+- `docs_get` lists every docs page, or returns one as Markdown. Use it for exact wording.
+- Both describe the product, not this workspace. A skill here is the first source for a job it covers; use the docs tools for a question no skill answers.
+
 ### Not over MCP
 
 By design: creating a workspace or inviting people, turning an Agent Live or publishing onto a Live one, writing workspace context, importing a catalog file or marking an identifier, connecting a channel, linking a RudderStack workspace, changing a workspace feature, and anything else that handles a credential. There is no ingest tool either, but `webhooks_create` returns a URL and token Claude can post events to (`events-catalog.md` → "Test events from Claude Code"). For the rest, produce the artifact and hand it to the user.
