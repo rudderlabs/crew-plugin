@@ -6,6 +6,7 @@
 
 | Skill                                                                     | Ask for it with                                                                |
 | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| [`get-started`](plugins/crew/skills/get-started/SKILL.md) | "What can I build with Crew?" |
 | [`workspace-setup`](plugins/crew/skills/workspace-setup/SKILL.md)         | "Build an Agent that welcomes new signups, dry-run it, then take it to Shadow" |
 | [`connect-rudderstack`](plugins/crew/skills/connect-rudderstack/SKILL.md) | "Send our RudderStack events to Crew"                                          |
 | [`connect-warehouse`](plugins/crew/skills/connect-warehouse/SKILL.md)     | "Each row of our Snowflake accounts table should trigger an Agent every week"  |
