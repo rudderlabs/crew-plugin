@@ -68,9 +68,9 @@ An invited person joins as `member`; an admin promotes them under Settings → M
 
 ### Decisions
 
-`analytics_list`, `analytics_get`, `analytics_getAnalytics`, `analytics_getExecution`, `analytics_getLineage`, `analytics_getSkillVersionMetrics`, and the decision actions `analytics_approve`, `analytics_editAndSend`, `analytics_reject`, `analytics_submitVerdict`, `analytics_saveFeedback`
+`analytics_list`, `analytics_listWaiting`, `analytics_get`, `analytics_getAnalytics`, `analytics_getExecution`, `analytics_getLineage`, `analytics_getSkillVersionMetrics`, and the decision actions `analytics_approve`, `analytics_editAndSend`, `analytics_reject`, `analytics_submitVerdict`, `analytics_saveFeedback`
 
-- Reading: `analytics_list` and `analytics_get` are the decisions with their signals, rationale, judge verdict and generated content; `analytics_getAnalytics` the aggregates; `analytics_getExecution` every tool call behind one decision, with `ok` and `errorText`; `analytics_getLineage` the sequence a decision belongs to; `analytics_getSkillVersionMetrics` the outcomes per published version. Pass every outcome to count everything; `pageSize` is 25, 50 or 100. `analytics_getExecution` is the only place a tool refused in Shadow shows up.
+- Reading: `analytics_list` and `analytics_get` are the decisions with their signals, rationale, judge verdict and generated content; `analytics_getAnalytics` the aggregates; `analytics_getExecution` every tool call behind one decision, with `ok` and `errorText`; `analytics_getLineage` the sequence a decision belongs to; `analytics_getSkillVersionMetrics` the outcomes per published version. Pass every outcome to count everything; `pageSize` is 25, 50 or 100. `analytics_listWaiting` is every message waiting for approval, oldest wait first, 25 a page by `cursor`: use it to review waiting messages, since acting on one never shifts its pages. Its rows hold no message text; open one with `analytics_get`. `analytics_getExecution` is the only place a tool refused in Shadow shows up.
 - The decision actions need `decisions:write`: the role over the sign-in, or a token with the `reviews` scope. `analytics_approve` and `analytics_editAndSend` send a waiting message to a real person, on a Live Agent only: ask first, every time. `analytics_reject` sends nothing. `analytics_submitVerdict` reviews a decision as the Decisions page does, and a review is final; `analytics_saveFeedback` changes only its note.
 
 ### Workspace context and events
@@ -114,6 +114,14 @@ An invited person joins as `member`; an admin promotes them under Settings → M
 `calibrate_eligibility`, `calibrate_start`, `calibrate_get`, `calibrate_getCard`, `calibrate_answer`, `calibrate_apply`, `calibrate_applyAnyway`, `calibrate_removeChange`, `calibrate_markKnownGap`, `calibrate_discard`, `calibrate_publish`, `calibrate_listRounds`, `calibrate_liveGate`
 
 - The `calibrate` skill runs a Calibrate round by round; `calibrate_publish` publishes to Shadow only. `calibrate_liveGate` says what would stop each action sending Live, for the person who takes the Agent Live.
+
+### Product docs
+
+`docs_ask`, `docs_get`
+
+- `docs_ask` answers one question from RudderCrew's public docs and names the pages it used. `isUncertain: true` means the docs did not clearly answer: read the `sources` with `docs_get` or tell the user, never guess. Each call runs a model on RudderCrew's side and takes a few seconds.
+- `docs_get` lists every docs page, or returns one as Markdown. Use it for exact wording.
+- Both describe the product, not this workspace. A skill here is the first source for a job it covers; use the docs tools for a question no skill answers.
 
 ### Not over MCP
 
