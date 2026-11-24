@@ -30,7 +30,7 @@ It also warns about things that pass every check and still go wrong:
     those fields are plain text, and the writer is told so.
   - requiredOutputFields on a channel other than a webhook, which ignores it.
   - on an account Agent (subject "account"), what turning it on refuses: a
-    channel other than slack or webhook, a Slack person or direct message as
+    channel other than slack, webhook or salesforce, a Slack person or direct message as
     the destination, follow-ups, a trigger delay, accountContext, per-action
     account limits and the identify_visitor_company tool.
 
@@ -57,7 +57,7 @@ TEXT_FIELD_KEYS = {"subject", "subject_line", "preheader", "preview_text"}
 STATIC_FIELD_CHANNELS = {None, "webhook"}  # plain-text and templated channels set each field's format themselves
 HTML_TAGS = re.compile(r"<(p|br|ul|ol|li|strong|em|a)\b", re.IGNORECASE)
 # A Markdown heading, bullet or numbered line. "**bold**" doesn't match: bold survives flattening.
-ACCOUNT_CHANNEL_TYPES = {"slack", "webhook"}  # the only channels an account Agent (subject "account") may use
+ACCOUNT_CHANNEL_TYPES = {"slack", "webhook", "salesforce"}  # the only channels an account Agent (subject "account") may use
 SLACK_PERSON_PREFIXES = ("U", "W", "D")  # a Slack user or direct-message id, which an account Agent may not post to
 ZERO_DELAY = re.compile(r"^\s*0+\s*[a-z]*\s*$")
 VISITOR_COMPANY_TOOL = "identify_visitor_company"
@@ -124,7 +124,7 @@ def account_errors(body, policies, ids):
         label = f"action '{p.get('action') or pid}'"
         channel_type = p.get("channelType")
         if channel_type and channel_type not in ACCOUNT_CHANNEL_TYPES:
-            found.append(f"{label}: an account Agent can use only a slack or webhook channel, not "
+            found.append(f"{label}: an account Agent can use only a slack, webhook or salesforce channel, not "
                          f"'{channel_type}'; {refused}")
         destination = p.get("destinationId")
         if channel_type == "slack" and isinstance(destination, str) and destination[:1] in SLACK_PERSON_PREFIXES:
