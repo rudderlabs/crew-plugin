@@ -109,6 +109,12 @@ An invited person joins as `member`; an admin promotes them under Settings → M
 - `accounts_listEventRules`, `accounts_saveEventRule` and `accounts_deleteEventRule` are the workspace's account event rules: which event names are about an account and where its id is. An account Agent (`subject: "account"`) receives only events whose name has one. The read needs any one of `users:read`, `skills:read` or `catalog:read`, so every role and token scope has it, and it answers whether or not account decisions is on. The two writes need `webhooks:write`: a role that can create webhooks, or a token with the `setup` scope. Saving a rule with `about: "account"` stops events of that name creating people and reaching person Agents, and deleting one reverses that: ask first, and say so. `account-agents.md` → "The account event rule" has the fields and refusals.
 - Profile enrichment, Accounts and Account decisions are workspace features: [Workspace features](../../../README.md#workspace-features).
 
+### Find companies and people
+
+`crewdata_findCompanies`, `crewdata_findPeople`
+
+- Search data Crew pays for, for companies and people to reach, where the workspace has Crew data search. Each answer states its `costUsd`: tell the user and keep a running total. Rows carry no email or phone, and nothing is stored in Crew. To have an Agent work on someone found, send an event about them to a webhook; `docs_ask` covers how. Both need `skills:write` or `users:write`.
+
 ### Calibrate
 
 `calibrate_eligibility`, `calibrate_start`, `calibrate_get`, `calibrate_getCard`, `calibrate_answer`, `calibrate_apply`, `calibrate_applyAnyway`, `calibrate_removeChange`, `calibrate_markKnownGap`, `calibrate_discard`, `calibrate_publish`, `calibrate_listRounds`, `calibrate_liveGate`
