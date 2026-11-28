@@ -113,7 +113,7 @@ An invited person joins as `member`; an admin promotes them under Settings → M
 
 `crewdata_findCompanies`, `crewdata_findPeople`
 
-- Search data Crew pays for, for companies and people to reach, where the workspace has Crew data search. Each answer states its `costUsd`: tell the user and keep a running total. Rows carry no email or phone, and nothing is stored in Crew. To have an Agent work on someone found, send an event about them to a webhook; `docs_ask` covers how. Both need `skills:write` or `users:write`.
+- Search data Crew pays for, for companies and people to reach, where the workspace has Crew data search. Each answer states its `costUsd`: tell the user and keep a running total. A people search looks up email addresses only when called with `email`, which costs more for each person and takes longer: set it when the user asks for addresses, and read the tool's description for what comes back. Nothing is stored in Crew. To have an Agent work on someone found, send an event about them to a webhook; `docs_ask` covers how. Both need `skills:write` or `users:write`.
 
 ### Calibrate
 
